@@ -1,5 +1,5 @@
 import { pdf } from "@react-pdf/renderer";
-import { Calendar, Printer, RotateCcw } from "lucide-react";
+import { Calendar, Download, Printer, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PlanMap } from "../components/map/PlanMap";
@@ -7,7 +7,7 @@ import { CotizacionPdf } from "../components/quote/CotizacionPdf";
 import { QuotePreview } from "../components/quote/QuotePreview";
 import * as api from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { lotCode, money, urlToDataUrl } from "../lib/money";
+import { downloadUrlAsFile, extensionFromUrl, lotCode, money, urlToDataUrl } from "../lib/money";
 import { computeQuote } from "../lib/quote";
 import { useStore } from "../lib/store";
 import type { Lot, QuoteItem } from "../lib/types";
@@ -30,6 +30,7 @@ export function Cotizador() {
   const [params, setParams] = useSearchParams();
   const showMap = params.get("plano") === "1";
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [prices, setPrices] = useState<Record<string, number>>({});
   const [discounts, setDiscounts] = useState<Record<string, number>>({});
   const [clientName, setClientName] = useState("");
   const [quoteDate, setQuoteDate] = useState(todayInputValue);
@@ -38,6 +39,7 @@ export function Cotizador() {
   const [terms, setTerms] = useState<number[]>([24, 36]);
   const [manzana, setManzana] = useState("A");
   const [busy, setBusy] = useState(false);
+  const [downloadingPlan, setDownloadingPlan] = useState(false);
   const [message, setMessage] = useState("");
 
   const manzanas = useMemo(() => [...new Set(lots.map((lot) => lot.manzana))].sort(), [lots]);
@@ -50,7 +52,7 @@ export function Cotizador() {
     manzana: lot.manzana,
     numero: lot.numero,
     areaM2: lot.areaM2,
-    price: lot.price,
+    price: prices[lot.id] ?? lot.price,
     discount: discounts[lot.id] || 0,
   }));
   const totals = useMemo(() => computeQuote(items, downPayment, terms), [items, downPayment, terms]);
@@ -108,6 +110,25 @@ export function Cotizador() {
       setMessage(error instanceof Error ? error.message : "No se pudo generar el PDF");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function downloadPlan() {
+    if (!currentProject?.planUrl) {
+      setMessage("Este proyecto no tiene plano para descargar.");
+      return;
+    }
+    setDownloadingPlan(true);
+    setMessage("");
+    try {
+      const ext = extensionFromUrl(currentProject.planUrl);
+      await downloadUrlAsFile(currentProject.planUrl, `Plano_${currentProject.slug}.${ext}`);
+      setMessage("Plano descargado.");
+    } catch (error) {
+      window.open(currentProject.planUrl, "_blank", "noopener,noreferrer");
+      setMessage(error instanceof Error ? error.message : "Se abrió el plano en una pestaña nueva.");
+    } finally {
+      setDownloadingPlan(false);
     }
   }
 
@@ -184,6 +205,7 @@ export function Cotizador() {
               {visibleLots.map((lot) => {
                 const selected = selectedIds.includes(lot.id);
                 const sold = lot.status === "vendido";
+                const quotePrice = prices[lot.id] ?? lot.price;
                 return (
                   <button
                     key={lot.id}
@@ -199,7 +221,7 @@ export function Cotizador() {
                   >
                     <p className={`text-sm font-bold ${sold ? "text-red-300" : "text-amber-300"}`}>{lotCode(lot.manzana, lot.numero)}</p>
                     <p className="text-[11px] text-[var(--muted)]">{lot.areaM2.toFixed(2)} m²</p>
-                    <p className="text-[11px]">{money(lot.price)}</p>
+                    <p className="text-[11px]">{money(quotePrice)}</p>
                   </button>
                 );
               })}
@@ -211,6 +233,9 @@ export function Cotizador() {
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-300">3</span>
               <h2 className="font-semibold">Lotes seleccionados</h2>
             </div>
+            <p className="mb-3 text-xs text-[var(--muted)]">
+              Edita el precio de cotización y el descuento para armar la oferta. El precio de lista del lote se mantiene como referencia.
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="text-[var(--muted)]">
@@ -223,11 +248,26 @@ export function Cotizador() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedLots.map((lot) => (
+                  {selectedLots.map((lot) => {
+                    const quotePrice = prices[lot.id] ?? lot.price;
+                    return (
                     <tr key={lot.id}>
                       <td className="p-1 font-semibold text-amber-300">{lotCode(lot.manzana, lot.numero)}</td>
                       <td className="p-1 text-center">{lot.areaM2.toFixed(2)}</td>
-                      <td className="p-1 text-center">{money(lot.price)}</td>
+                      <td className="p-1">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="app-input mt-0 w-28 py-1"
+                          value={quotePrice}
+                          onChange={(event) => setPrices((current) => ({ ...current, [lot.id]: Number(event.target.value) }))}
+                          aria-label={`Precio de cotización ${lotCode(lot.manzana, lot.numero)}`}
+                        />
+                        {quotePrice !== lot.price ? (
+                          <p className="mt-0.5 text-[10px] text-[var(--muted)]">Lista {money(lot.price)}</p>
+                        ) : null}
+                      </td>
                       <td className="p-1">
                         <input
                           type="number"
@@ -241,13 +281,21 @@ export function Cotizador() {
                         <button
                           type="button"
                           className="app-btn min-h-9 border border-white/15 px-3 text-xs"
-                          onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== lot.id))}
+                          onClick={() => {
+                            setSelectedIds((ids) => ids.filter((id) => id !== lot.id));
+                            setPrices((current) => {
+                              const next = { ...current };
+                              delete next[lot.id];
+                              return next;
+                            });
+                          }}
                         >
                           Quitar
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -299,7 +347,7 @@ export function Cotizador() {
 
         <section className="app-card overflow-x-auto">
           <div className="no-print mb-3 flex flex-wrap justify-end gap-2">
-            <button className="app-btn app-btn-primary" onClick={() => { setSelectedIds([]); setDiscounts({}); setDownPayment(0); setClientName(""); setQuoteDate(todayInputValue()); }}>
+            <button className="app-btn app-btn-primary" onClick={() => { setSelectedIds([]); setPrices({}); setDiscounts({}); setDownPayment(0); setClientName(""); setQuoteDate(todayInputValue()); }}>
               <RotateCcw size={14} /> Limpiar todo
             </button>
             <button className="app-btn app-btn-primary" onClick={() => window.print()}>
@@ -329,7 +377,17 @@ export function Cotizador() {
               <p className="font-semibold">Plano de lotización · {currentProject.name}</p>
               <p className="text-xs text-[var(--muted)]">Pasa el puntero sobre un lote para ver precio y disponibilidad. Espacio + arrastrar para mover.</p>
             </div>
-            <button className="app-btn bg-white text-brand-navy" onClick={() => setParams({})}>Cerrar</button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                className="app-btn app-btn-primary"
+                disabled={downloadingPlan}
+                onClick={() => void downloadPlan()}
+              >
+                <Download size={14} /> {downloadingPlan ? "Descargando..." : "Descargar plano"}
+              </button>
+              <button className="app-btn bg-white text-brand-navy" onClick={() => setParams({})}>Cerrar</button>
+            </div>
           </div>
           <div className="min-h-0 flex-1">
             <PlanMap
@@ -341,6 +399,8 @@ export function Cotizador() {
               draftPoints={[]}
               onDraftPoints={() => undefined}
               onSelect={(lot) => toggleLot(lot)}
+              onDownload={() => void downloadPlan()}
+              downloadBusy={downloadingPlan}
               containerClassName="h-[calc(100dvh-6.5rem)] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-200"
             />
           </div>

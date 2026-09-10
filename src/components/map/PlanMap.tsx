@@ -20,6 +20,8 @@ type PlanMapProps = {
   onRequestEdit?: (lot: Lot) => void;
   reshapeLotId?: string | null;
   containerClassName?: string;
+  onDownload?: () => void;
+  downloadBusy?: boolean;
 };
 
 function clamp01(value: number) {
@@ -71,6 +73,8 @@ export function PlanMap({
   onRequestEdit,
   reshapeLotId,
   containerClassName,
+  onDownload,
+  downloadBusy,
 }: PlanMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const spaceRef = useRef(false);
@@ -356,6 +360,16 @@ export function PlanMap({
         >
           Reset zoom
         </button>
+        {onDownload ? (
+          <button
+            type="button"
+            className="app-btn min-h-11 border border-white/15 bg-white px-4 text-brand-navy"
+            disabled={downloadBusy}
+            onClick={onDownload}
+          >
+            {downloadBusy ? "Descargando..." : "Descargar plano"}
+          </button>
+        ) : null}
         <span className="text-xs text-[var(--muted)]">{hint}</span>
       </div>
       <div
