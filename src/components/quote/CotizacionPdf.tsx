@@ -1,0 +1,146 @@
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { formatLongDate, lotCode, money } from "../../lib/money";
+import { computeQuote } from "../../lib/quote";
+import type { Company, Project, QuoteItem } from "../../lib/types";
+
+const styles = StyleSheet.create({
+  page: { padding: 32, fontSize: 10, color: "#122033", fontFamily: "Helvetica" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  logo: { width: 72, height: 72 },
+  title: { fontSize: 20, color: "#0f2744", textAlign: "center", fontFamily: "Helvetica-Bold" },
+  subtitle: { fontSize: 12, color: "#1f6b3a", textAlign: "center", marginTop: 4, fontFamily: "Helvetica-Bold" },
+  meta: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: "#d6d3d1", paddingBottom: 8 },
+  lotsTitle: { color: "#1f6b3a", textAlign: "center", marginBottom: 10, fontFamily: "Helvetica-Bold" },
+  section: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#0f2744", marginTop: 12, marginBottom: 6 },
+  tableHeader: { flexDirection: "row", backgroundColor: "#0f2744", color: "white", padding: 5 },
+  row: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e7eb", padding: 5 },
+  cell: { flex: 1, textAlign: "center" },
+  totals: { marginTop: 4, alignItems: "flex-end" },
+  totalLine: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 2 },
+  finance: { flexDirection: "row", backgroundColor: "#f4f1ea", padding: 10, justifyContent: "space-between", marginTop: 8 },
+  footer: { marginTop: 18, textAlign: "center", color: "#57534e", fontSize: 8 },
+  note: { marginTop: 8, fontSize: 8, color: "#44403c" },
+});
+
+type Props = {
+  company: Company;
+  project: Project;
+  clientName: string;
+  items: QuoteItem[];
+  downPayment: number;
+  companyLogo: string;
+  projectLogo: string;
+};
+
+export function CotizacionPdf({ company, project, clientName, items, downPayment, companyLogo, projectLogo }: Props) {
+  const totals = computeQuote(items, downPayment);
+  const lotLabel = items.map((item) => lotCode(item.manzana, item.numero)).join(", ");
+  const manzanas = [...new Set(items.map((item) => item.manzana))].join(", ");
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Image src={companyLogo} style={styles.logo} />
+          <View>
+            <Text style={styles.title}>COTIZACIÓN</Text>
+            <Text style={styles.subtitle}>{project.name.toUpperCase()}</Text>
+          </View>
+          <Image src={projectLogo} style={styles.logo} />
+        </View>
+
+        <View style={styles.meta}>
+          <Text>Cliente: {clientName || "________________"}</Text>
+          <Text>Fecha: {formatLongDate()}</Text>
+        </View>
+        <Text style={styles.lotsTitle}>MZ {manzanas} · LOTES {lotLabel}</Text>
+
+        <Text style={styles.section}>Detalle de los lotes</Text>
+        <View style={styles.tableHeader}>
+          <Text style={styles.cell}>LOTE</Text>
+          <Text style={styles.cell}>ÁREA</Text>
+          <Text style={styles.cell}>PRECIO LISTA</Text>
+          <Text style={styles.cell}>DESCUENTO</Text>
+          <Text style={styles.cell}>PRECIO FINAL</Text>
+        </View>
+        {items.map((item) => (
+          <View key={item.lotId} style={styles.row}>
+            <Text style={styles.cell}>{lotCode(item.manzana, item.numero)}</Text>
+            <Text style={styles.cell}>{item.areaM2.toFixed(2)} m²</Text>
+            <Text style={styles.cell}>{money(item.price)}</Text>
+            <Text style={styles.cell}>{money(item.discount)}</Text>
+            <Text style={styles.cell}>{money(item.price - item.discount)}</Text>
+          </View>
+        ))}
+        <View style={styles.totals}>
+          <View style={styles.totalLine}>
+            <Text>TOTAL DESCUENTO</Text>
+            <Text>{money(totals.totalDiscount)}</Text>
+          </View>
+          <View style={styles.totalLine}>
+            <Text>TOTAL LISTA</Text>
+            <Text>{money(totals.totalList)}</Text>
+          </View>
+          <View style={styles.totalLine}>
+            <Text>TOTAL CON DESCUENTO</Text>
+            <Text>{money(totals.totalFinal)}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.section}>Resumen financiero</Text>
+        <View style={styles.finance}>
+          <View>
+            <Text>TOTAL CON DESCUENTO</Text>
+            <Text>{money(totals.totalFinal)}</Text>
+          </View>
+          <View>
+            <Text>INICIAL DEL CLIENTE</Text>
+            <Text>- {money(downPayment)}</Text>
+          </View>
+          <View>
+            <Text>SALDO A FINANCIAR</Text>
+            <Text>{money(totals.balance)}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.section}>Opciones de financiamiento</Text>
+        <View style={[styles.tableHeader, { backgroundColor: "#1f6b3a" }]}>
+          <Text style={styles.cell}>PLAZO</Text>
+          <Text style={styles.cell}>N.º DE CUOTAS</Text>
+          <Text style={styles.cell}>SALDO A FINANCIAR</Text>
+          <Text style={styles.cell}>CUOTA MENSUAL*</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.cell}>2 años</Text>
+          <Text style={styles.cell}>24 meses</Text>
+          <Text style={styles.cell}>{money(totals.balance)}</Text>
+          <Text style={styles.cell}>{money(totals.installment24)}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.cell}>3 años</Text>
+          <Text style={styles.cell}>36 meses</Text>
+          <Text style={styles.cell}>{money(totals.balance)}</Text>
+          <Text style={styles.cell}>{money(totals.installment36)}</Text>
+        </View>
+        <Text style={styles.note}>
+          * Las cuotas corresponden a una división simple del saldo entre el número de meses. No incluyen intereses, gastos administrativos, trámites u otros cargos que pudieran aplicar.
+        </Text>
+
+        <Text style={styles.section}>Resumen de la propuesta</Text>
+        <Text>• Proyecto: {project.name}.</Text>
+        <Text>• Lotes: Mz {manzanas}, {lotLabel}.</Text>
+        <Text>• Área total: {totals.areaTotal.toFixed(2)} m².</Text>
+        <Text>• Descuento comercial: {money(totals.totalDiscount)}.</Text>
+        <Text>• Inicial del cliente: {money(downPayment)}.</Text>
+        <Text>• Saldo a financiar: {money(totals.balance)}.</Text>
+        <Text style={styles.note}>
+          NOTA: Esta cotización es referencial y está sujeta a disponibilidad de los lotes, validación comercial y condiciones vigentes de {company.name} al momento de la separación.
+        </Text>
+        <Text style={styles.footer}>
+          {company.name.toUpperCase()}
+          {company.ruc ? `  ·  RUC ${company.ruc}` : ""}  ·  {project.name.toUpperCase()}
+        </Text>
+      </Page>
+    </Document>
+  );
+}
