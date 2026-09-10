@@ -1,14 +1,15 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { formatLongDate, lotCode, money } from "../../lib/money";
-import { computeQuote } from "../../lib/quote";
+import { computeQuote, yearsLabel } from "../../lib/quote";
 import type { Company, Project, QuoteItem } from "../../lib/types";
 
 const styles = StyleSheet.create({
-  page: { padding: 32, fontSize: 10, color: "#122033", fontFamily: "Helvetica" },
+  page: { padding: 32, fontSize: 10, color: "#122033", fontFamily: "Helvetica", backgroundColor: "#ffffff" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   logo: { width: 72, height: 72 },
   title: { fontSize: 20, color: "#0f2744", textAlign: "center", fontFamily: "Helvetica-Bold" },
   subtitle: { fontSize: 12, color: "#1f6b3a", textAlign: "center", marginTop: 4, fontFamily: "Helvetica-Bold" },
+  ruc: { fontSize: 9, color: "#122033", textAlign: "center", marginTop: 3 },
   meta: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: "#d6d3d1", paddingBottom: 8 },
   lotsTitle: { color: "#1f6b3a", textAlign: "center", marginBottom: 10, fontFamily: "Helvetica-Bold" },
   section: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#0f2744", marginTop: 12, marginBottom: 6 },
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
   cell: { flex: 1, textAlign: "center" },
   totals: { marginTop: 4, alignItems: "flex-end" },
   totalLine: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 2 },
-  finance: { flexDirection: "row", backgroundColor: "#f4f1ea", padding: 10, justifyContent: "space-between", marginTop: 8 },
+  finance: { flexDirection: "row", backgroundColor: "#f3f4f6", padding: 10, justifyContent: "space-between", marginTop: 8 },
   footer: { marginTop: 18, textAlign: "center", color: "#57534e", fontSize: 8 },
   note: { marginTop: 8, fontSize: 8, color: "#44403c" },
 });
@@ -28,12 +29,14 @@ type Props = {
   clientName: string;
   items: QuoteItem[];
   downPayment: number;
+  terms: number[];
+  quoteDate: Date;
   companyLogo: string;
   projectLogo: string;
 };
 
-export function CotizacionPdf({ company, project, clientName, items, downPayment, companyLogo, projectLogo }: Props) {
-  const totals = computeQuote(items, downPayment);
+export function CotizacionPdf({ company, project, clientName, items, downPayment, terms, quoteDate, companyLogo, projectLogo }: Props) {
+  const totals = computeQuote(items, downPayment, terms);
   const lotLabel = items.map((item) => lotCode(item.manzana, item.numero)).join(", ");
   const manzanas = [...new Set(items.map((item) => item.manzana))].join(", ");
 
@@ -45,13 +48,14 @@ export function CotizacionPdf({ company, project, clientName, items, downPayment
           <View>
             <Text style={styles.title}>COTIZACIÓN</Text>
             <Text style={styles.subtitle}>{project.name.toUpperCase()}</Text>
+            {company.ruc ? <Text style={styles.ruc}>RUC {company.ruc}</Text> : null}
           </View>
           <Image src={projectLogo} style={styles.logo} />
         </View>
 
         <View style={styles.meta}>
           <Text>Cliente: {clientName || "________________"}</Text>
-          <Text>Fecha: {formatLongDate()}</Text>
+          <Text>Fecha: {formatLongDate(quoteDate)}</Text>
         </View>
         <Text style={styles.lotsTitle}>MZ {manzanas} · LOTES {lotLabel}</Text>
 
@@ -110,18 +114,14 @@ export function CotizacionPdf({ company, project, clientName, items, downPayment
           <Text style={styles.cell}>SALDO A FINANCIAR</Text>
           <Text style={styles.cell}>CUOTA MENSUAL*</Text>
         </View>
-        <View style={styles.row}>
-          <Text style={styles.cell}>2 años</Text>
-          <Text style={styles.cell}>24 meses</Text>
-          <Text style={styles.cell}>{money(totals.balance)}</Text>
-          <Text style={styles.cell}>{money(totals.installment24)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.cell}>3 años</Text>
-          <Text style={styles.cell}>36 meses</Text>
-          <Text style={styles.cell}>{money(totals.balance)}</Text>
-          <Text style={styles.cell}>{money(totals.installment36)}</Text>
-        </View>
+        {totals.installments.map((term) => (
+          <View key={term.months} style={styles.row}>
+            <Text style={styles.cell}>{yearsLabel(term.months)}</Text>
+            <Text style={styles.cell}>{term.months} meses</Text>
+            <Text style={styles.cell}>{money(totals.balance)}</Text>
+            <Text style={styles.cell}>{money(term.amount)}</Text>
+          </View>
+        ))}
         <Text style={styles.note}>
           * Las cuotas corresponden a una división simple del saldo entre el número de meses. No incluyen intereses, gastos administrativos, trámites u otros cargos que pudieran aplicar.
         </Text>

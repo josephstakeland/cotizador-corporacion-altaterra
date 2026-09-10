@@ -16,6 +16,7 @@ export type LocalStore = {
 
 const DEFAULT_COMPANY_ID = "company-altaterra";
 const DEFAULT_PROJECT_ID = "project-bosques-del-sol-ii";
+const DEFAULT_COMPANY_RUC = "20614964325";
 
 function defaultStore(adminHash: string, advisorHash: string): LocalStore {
   const lots: Lot[] = (lotesSeed as { manzana: string; numero: number; area_m2: number; price: number }[]).map(
@@ -35,7 +36,7 @@ function defaultStore(adminHash: string, advisorHash: string): LocalStore {
     company: {
       id: DEFAULT_COMPANY_ID,
       name: "Corporación Altaterra",
-      ruc: "",
+      ruc: DEFAULT_COMPANY_RUC,
       logoUrl: "/logos/altaterra.png",
     },
     projects: [
@@ -45,7 +46,7 @@ function defaultStore(adminHash: string, advisorHash: string): LocalStore {
         name: "Bosques del Sol II",
         slug: "bosques-del-sol-ii",
         logoUrl: "/logos/bosques-del-sol-ii.png",
-        planUrl: "/planos/bosques-del-sol-ii.jpg",
+        planUrl: "/planos/bosques-del-sol-ii-h2.jpg",
       },
     ],
     lots,
@@ -79,6 +80,22 @@ export async function loadStore(): Promise<LocalStore> {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       memory = JSON.parse(raw) as LocalStore;
+      const flippedFromInverted = memory.projects.some((project) => project.planUrl.endsWith("bosques-del-sol-ii-h.jpg"));
+      memory.projects = memory.projects.map((project) =>
+        project.planUrl.includes("bosques-del-sol-ii") && !project.planUrl.includes("h2")
+          ? { ...project, planUrl: "/planos/bosques-del-sol-ii-h2.jpg" }
+          : project,
+      );
+      if (flippedFromInverted) {
+        memory.lots = memory.lots.map((lot) => ({
+          ...lot,
+          polygon: lot.polygon ? lot.polygon.map((point) => ({ x: 1 - point.x, y: 1 - point.y })) : null,
+        }));
+      }
+      if (!memory.company.ruc) {
+        memory.company = { ...memory.company, ruc: DEFAULT_COMPANY_RUC };
+      }
+      localStorage.setItem(KEY, JSON.stringify(memory));
       return memory;
     }
     const store = defaultStore(await sha256("Admin123!"), await sha256("Asesor123!"));

@@ -11,19 +11,61 @@ export function AdminMapa() {
   const [draftPoints, setDraftPoints] = useState<Point[]>([]);
   const [pendingPolygon, setPendingPolygon] = useState<Point[] | null>(null);
   const [editingLot, setEditingLot] = useState<Lot | null>(null);
+  const [reshaping, setReshaping] = useState(false);
   const [lotId, setLotId] = useState("");
   const [status, setStatus] = useState<LotStatus>("disponible");
+  const [filterMz, setFilterMz] = useState("TODAS");
+
+  const manzanas = useMemo(
+    () => [...new Set(lots.map((lot) => lot.manzana))].sort(),
+    [lots],
+  );
 
   const unmapped = useMemo(
-    () => lots.filter((lot) => !lot.polygon || lot.id === editingLot?.id).sort((a, b) => a.manzana.localeCompare(b.manzana) || a.numero - b.numero),
-    [lots, editingLot],
+    () =>
+      lots
+        .filter((lot) => !lot.polygon || lot.id === editingLot?.id)
+        .filter((lot) => filterMz === "TODAS" || lot.manzana === filterMz)
+        .sort((a, b) => a.manzana.localeCompare(b.manzana) || a.numero - b.numero),
+    [lots, editingLot, filterMz],
   );
 
   function openAssign(points: Point[], lot?: Lot) {
+    setReshaping(false);
     setPendingPolygon(points);
     setEditingLot(lot || null);
-    setLotId(lot?.id || unmapped[0]?.id || "");
+    setFilterMz(lot?.manzana || "TODAS");
+    setLotId(lot?.id || "");
     setStatus(lot?.status || "disponible");
+  }
+
+  function startReshape(points: Point[], lot?: Lot) {
+    if (points.length < 3) return;
+    setPendingPolygon(null);
+    setEditingLot(lot || null);
+    setDraftPoints(points.map((point) => ({ ...point })));
+    setReshaping(true);
+    setTool("reshape");
+  }
+
+  function cancelReshape() {
+    setReshaping(false);
+    setDraftPoints([]);
+    setEditingLot(null);
+  }
+
+  async function saveReshape() {
+    if (draftPoints.length < 3) return;
+    if (editingLot) {
+      await api.updateLot(editingLot.id, { polygon: draftPoints });
+      setReshaping(false);
+      setDraftPoints([]);
+      setEditingLot(null);
+      await refresh();
+      return;
+    }
+    setReshaping(false);
+    openAssign(draftPoints);
   }
 
   async function saveAssignment() {
@@ -36,6 +78,7 @@ export function AdminMapa() {
     setPendingPolygon(null);
     setEditingLot(null);
     setDraftPoints([]);
+    setReshaping(false);
     await refresh();
   }
 
@@ -44,16 +87,20 @@ export function AdminMapa() {
     await api.updateLot(editingLot.id, { polygon: null });
     setPendingPolygon(null);
     setEditingLot(null);
+    setReshaping(false);
+    setDraftPoints([]);
     await refresh();
   }
 
   if (!currentProject) return <p>Cargando plano...</p>;
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h1 className="text-xl font-semibold text-brand-navy">Editor de unidades por dibujo</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Dibuja en el plano y luego asigna la figura a un lote. Verde = disponible, rojo = vendido. Click derecho sobre una figura para editarla.
+    <section className="app-card">
+      <h1 className="text-xl font-semibold">Editor de unidades por dibujo</h1>
+      <p className="mb-4 text-sm text-[var(--muted)]">
+        {reshaping
+          ? "Arrastra los puntos dorados para ajustar el lote. Clic en un lado para agregar un punto. Doble clic en un punto para quitarlo."
+          : "Plano horizontal. Verde = disponible, rojo = vendido. Usa Editar figura para mover los puntos de un lote irregular."}
       </p>
       <div className="mb-4 flex flex-wrap gap-2">
         {(
@@ -61,76 +108,137 @@ export function AdminMapa() {
             ["select", "Solo selección"],
             ["polyline", "Puntos"],
             ["rect", "Rectángulo"],
+            ["reshape", "Editar figura"],
           ] as const
         ).map(([value, label]) => (
           <button
             key={value}
-            className={`rounded-full px-3 py-1.5 text-sm ${tool === value ? "bg-brand-navy text-white" : "border"}`}
-            onClick={() => setTool(value)}
+            className={`rounded-full px-3 py-1.5 text-sm ${tool === value ? "bg-white text-brand-navy" : "border border-white/15"}`}
+            onClick={() => {
+              setTool(value);
+              if (value !== "reshape" && reshaping) cancelReshape();
+            }}
           >
             {label}
           </button>
         ))}
-        <button className="rounded-full border px-3 py-1.5 text-sm" onClick={() => setDraftPoints((points) => points.slice(0, -1))}>
+        <button className="rounded-full border border-white/15 px-3 py-1.5 text-sm" onClick={() => setDraftPoints((points) => points.slice(0, -1))}>
           Deshacer punto
         </button>
-        <button className="rounded-full border px-3 py-1.5 text-sm" onClick={() => setDraftPoints([])}>
+        <button className="rounded-full border border-white/15 px-3 py-1.5 text-sm" onClick={() => setDraftPoints([])}>
           Limpiar puntos
         </button>
-        <button
-          className="rounded-full border px-3 py-1.5 text-sm"
-          onClick={() => {
-            if (draftPoints.length >= 3) openAssign(draftPoints);
-          }}
-        >
-          Crear figura
-        </button>
+        {reshaping ? (
+          <>
+            <button
+              className="rounded-full bg-white px-3 py-1.5 text-sm text-brand-navy"
+              onClick={() => void saveReshape()}
+              disabled={draftPoints.length < 3}
+            >
+              Guardar figura
+            </button>
+            <button className="rounded-full border border-white/15 px-3 py-1.5 text-sm" onClick={cancelReshape}>
+              Cancelar edición
+            </button>
+          </>
+        ) : (
+          <button
+            className="rounded-full border border-white/15 px-3 py-1.5 text-sm"
+            onClick={() => {
+              if (draftPoints.length >= 3) openAssign(draftPoints);
+            }}
+          >
+            Crear figura
+          </button>
+        )}
       </div>
 
       <PlanMap
         planUrl={currentProject.planUrl}
         lots={lots}
-        tool={tool}
+        tool={reshaping ? "reshape" : tool}
         mode="edit"
         selectedIds={editingLot ? [editingLot.id] : []}
         draftPoints={draftPoints}
         onDraftPoints={setDraftPoints}
-        onSelect={(lot) => openAssign(lot.polygon || [], lot)}
+        onSelect={(lot) => {
+          if (tool === "reshape" || reshaping) {
+            if (lot.polygon) startReshape(lot.polygon, lot);
+            return;
+          }
+          openAssign(lot.polygon || [], lot);
+        }}
         onCreatePolygon={(points) => openAssign(points)}
-        onRequestEdit={(lot) => openAssign(lot.polygon || [], lot)}
+        onRequestEdit={(lot) => {
+          if (lot.polygon) startReshape(lot.polygon, lot);
+        }}
+        reshapeLotId={reshaping ? editingLot?.id || null : null}
+        containerClassName="aspect-[1.41/1] max-h-[72vh] min-h-[240px] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-200"
       />
 
       {pendingPolygon && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5">
-            <h2 className="mb-3 text-lg font-semibold">Asignar lote</h2>
-            <label className="mb-3 block text-sm">
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#f7f4ee] p-5 text-[#122033] shadow-2xl">
+            <h2 className="text-lg font-semibold text-[#0f2744]">Asignar lote</h2>
+            <p className="mb-4 text-sm text-slate-600">Selecciona manzana, lote y si está disponible o vendido.</p>
+            <label className="mb-3 block text-sm font-medium text-[#0f2744]">
+              Manzana
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[#122033]"
+                value={filterMz}
+                onChange={(event) => {
+                  setFilterMz(event.target.value);
+                  setLotId("");
+                }}
+              >
+                <option value="TODAS">Todas</option>
+                {manzanas.map((item) => (
+                  <option key={item} value={item}>Mz {item}</option>
+                ))}
+              </select>
+            </label>
+            <label className="mb-3 block text-sm font-medium text-[#0f2744]">
               Lote
-              <select className="mt-1 w-full rounded border px-3 py-2" value={lotId} onChange={(event) => setLotId(event.target.value)}>
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[#122033]"
+                value={lotId}
+                onChange={(event) => setLotId(event.target.value)}
+              >
+                <option value="">Selecciona un lote</option>
                 {unmapped.map((lot) => (
                   <option key={lot.id} value={lot.id}>
-                    {lotCode(lot.manzana, lot.numero)} · {lot.areaM2} m²
+                    {lotCode(lot.manzana, lot.numero)} · {lot.areaM2} m² · {lot.status}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="mb-4 block text-sm">
+            <label className="mb-4 block text-sm font-medium text-[#0f2744]">
               Estado
-              <select className="mt-1 w-full rounded border px-3 py-2" value={status} onChange={(event) => setStatus(event.target.value as LotStatus)}>
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[#122033]"
+                value={status}
+                onChange={(event) => setStatus(event.target.value as LotStatus)}
+              >
                 <option value="disponible">Disponible (verde)</option>
                 <option value="vendido">Vendido (rojo)</option>
               </select>
             </label>
-            <div className="flex gap-2">
-              <button className="rounded-lg bg-brand-navy px-4 py-2 text-white" onClick={() => void saveAssignment()}>
+            <div className="flex flex-wrap gap-2">
+              <button className="rounded-xl bg-[#0f2744] px-4 py-2.5 text-white" onClick={() => void saveAssignment()} disabled={!lotId}>
                 Guardar
               </button>
+              <button
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-[#0f2744]"
+                onClick={() => startReshape(pendingPolygon, editingLot || undefined)}
+              >
+                Editar figura
+              </button>
               {editingLot && (
-                <button className="rounded-lg border px-4 py-2 text-red-600" onClick={() => void removePolygon()}>
+                <button className="rounded-xl border border-red-200 px-4 py-2.5 text-red-700" onClick={() => void removePolygon()}>
                   Quitar figura
                 </button>
               )}
-              <button className="ml-auto rounded-lg border px-4 py-2" onClick={() => setPendingPolygon(null)}>
+              <button className="ml-auto rounded-xl border border-slate-300 px-4 py-2.5" onClick={() => setPendingPolygon(null)}>
                 Cancelar
               </button>
             </div>

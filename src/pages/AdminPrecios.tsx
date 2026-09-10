@@ -41,11 +41,11 @@ export function AdminPrecios() {
   if (!currentProject) return <p>Cargando...</p>;
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
+    <section className="app-card">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-brand-navy">Precios y disponibilidad</h1>
-          <p className="text-sm text-slate-500">{filtered.length} lotes en {currentProject.name}</p>
+          <h1 className="text-xl font-semibold">Precios y disponibilidad</h1>
+          <p className="text-sm text-[var(--muted)]">{filtered.length} lotes en {currentProject.name}</p>
         </div>
         <label className="text-sm">
           Manzana

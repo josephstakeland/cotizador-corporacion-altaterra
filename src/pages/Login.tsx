@@ -30,51 +30,28 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-cream px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+    <div className="flex min-h-dvh items-center justify-center px-4" style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}>
+      <div className="app-card w-full max-w-md p-8">
         <div className="mb-6 flex items-center justify-center gap-6">
-          <img src="/logos/altaterra.png" alt="Altaterra" className="h-20 object-contain" />
-          <img src="/logos/bosques-del-sol-ii.png" alt="Bosques del Sol II" className="h-20 object-contain" />
+          <img src="/logos/altaterra.png" alt="Altaterra" className="h-16 object-contain sm:h-20" />
+          <img src="/logos/bosques-del-sol-ii.png" alt="Bosques del Sol II" className="h-16 object-contain sm:h-20" />
         </div>
-        <h1 className="text-center text-2xl font-semibold text-brand-navy">Cotizador Altaterra</h1>
-        <p className="mb-6 text-center text-sm text-slate-500">Bosques del Sol II</p>
+        <h1 className="text-center text-2xl font-semibold">Cotizador Altaterra</h1>
+        <p className="mb-6 text-center text-sm text-[var(--muted)]">Bosques del Sol II</p>
         <form className="space-y-3" onSubmit={handleSubmit}>
           {mode === "register" && (
-            <input
-              className="w-full rounded-lg border px-3 py-2"
-              placeholder="Nombre completo"
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              required
-            />
+            <input className="app-input mt-0" placeholder="Nombre completo" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
           )}
-          <input
-            className="w-full rounded-lg border px-3 py-2"
-            type="email"
-            placeholder="Correo"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          <input
-            className="w-full rounded-lg border px-3 py-2"
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button disabled={loading} className="w-full rounded-lg bg-brand-navy py-2 text-white">
+          <input className="app-input mt-0" type="email" placeholder="Correo" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <input className="app-input mt-0" type="password" placeholder="Contraseña" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button disabled={loading} className="app-btn w-full bg-white text-brand-navy">
             {loading ? "Ingresando..." : mode === "login" ? "Ingresar" : "Crear cuenta"}
           </button>
         </form>
-        <button className="mt-4 w-full text-sm text-brand-navy" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+        <button className="mt-4 w-full text-sm text-sky-300" onClick={() => setMode(mode === "login" ? "register" : "login")}>
           {mode === "login" ? "Crear cuenta de asesor" : "Ya tengo cuenta"}
         </button>
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Demo: admin@altaterra.pe / Admin123! · asesor@altaterra.pe / Asesor123!
-        </p>
       </div>
     </div>
   );

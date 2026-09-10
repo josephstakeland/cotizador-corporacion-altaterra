@@ -50,15 +50,15 @@ export function AdminEmpresa() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h1 className="mb-4 text-xl font-semibold text-brand-navy">Empresa</h1>
+      <section className="app-card">
+        <h1 className="mb-4 text-xl font-semibold">Empresa</h1>
         <label className="mb-3 block text-sm">
           Nombre
-          <input className="mt-1 w-full rounded border px-3 py-2" value={name} onChange={(event) => setName(event.target.value)} />
+          <input className="app-input" value={name} onChange={(event) => setName(event.target.value)} />
         </label>
         <label className="mb-3 block text-sm">
           RUC
-          <input className="mt-1 w-full rounded border px-3 py-2" value={ruc} onChange={(event) => setRuc(event.target.value)} placeholder="Ingresa el RUC para la cotización" />
+          <input className="app-input" value={ruc} onChange={(event) => setRuc(event.target.value)} placeholder="Ingresa el RUC para la cotización" />
         </label>
         <label className="mb-4 block text-sm">
           Logo de la empresa
@@ -70,8 +70,8 @@ export function AdminEmpresa() {
         </button>
       </section>
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-4 text-xl font-semibold text-brand-navy">Proyecto actual</h2>
+      <section className="app-card">
+        <h2 className="mb-4 text-xl font-semibold">Proyecto actual</h2>
         {currentProject && (
           <>
             <p className="mb-3 font-medium">{currentProject.name}</p>
@@ -92,7 +92,7 @@ export function AdminEmpresa() {
 
         <form className="mt-6 space-y-3 border-t pt-4" onSubmit={(event) => void addProject(event)}>
           <h3 className="font-semibold">Agregar otro proyecto</h3>
-          <input className="w-full rounded border px-3 py-2" placeholder="Nombre del proyecto" value={projectName} onChange={(event) => setProjectName(event.target.value)} required />
+          <input className="app-input" placeholder="Nombre del proyecto" value={projectName} onChange={(event) => setProjectName(event.target.value)} required />
           <input name="logo" type="file" accept="image/*" />
           <input name="plan" type="file" accept="image/*" />
           <button className="rounded-lg bg-brand-green px-4 py-2 text-white">Crear proyecto</button>

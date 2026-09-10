@@ -2,16 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #0b1220;
+  --card: #141c2c;
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #e8eef7;
+  --muted: #93a0b5;
+  --gold: #d4b36a;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html[data-theme="light"] {
+  --bg: #eef1f6;
+  --card: #ffffff;
+  --line: rgba(15, 39, 68, 0.12);
+  --text: #122033;
+  --muted: #5b6b80;
+}
+
 html,
 body,
 #root {
   min-height: 100%;
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
-  background: #f4f1ea;
-  color: #122033;
+  background: var(--bg);
+  color: var(--text);
 }
 
 input,
@@ -19,4 +39,71 @@ select,
 textarea,
 button {
   font: inherit;
+}
+
+@layer components {
+  .app-card {
+    @apply rounded-2xl border p-4;
+    background: var(--card);
+    border-color: var(--line);
+  }
+  .app-input {
+    @apply mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none;
+    background: color-mix(in srgb, var(--card) 70%, black);
+    border-color: var(--line);
+    color: var(--text);
+    color-scheme: dark;
+  }
+  .app-input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    display: none;
+  }
+  .app-btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium;
+  }
+  .app-btn-primary {
+    @apply bg-white/10 text-[var(--text)] hover:bg-white/15;
+  }
+  .chip {
+    @apply min-h-10 rounded-lg px-3 py-2 text-xs font-semibold;
+  }
+}
+
+html[data-theme="light"] .app-btn-primary {
+  background: rgba(15, 39, 68, 0.08);
+  color: #122033;
+}
+
+html[data-theme="light"] .app-input {
+  background: #fff;
+  color: #122033;
+  color-scheme: light;
+}
+
+html[data-theme="light"] .chip {
+  background: rgba(15, 39, 68, 0.06);
+}
+
+#quote-paper {
+  background-color: #ffffff !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #quote-paper,
+  #quote-paper * {
+    visibility: visible !important;
+  }
+  #quote-paper {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
 }

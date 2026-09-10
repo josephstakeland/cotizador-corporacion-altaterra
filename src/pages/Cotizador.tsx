@@ -1,7 +1,10 @@
 import { pdf } from "@react-pdf/renderer";
-import { useMemo, useState } from "react";
+import { Calendar, Printer, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PlanMap } from "../components/map/PlanMap";
 import { CotizacionPdf } from "../components/quote/CotizacionPdf";
+import { QuotePreview } from "../components/quote/QuotePreview";
 import * as api from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { lotCode, money, urlToDataUrl } from "../lib/money";
@@ -9,16 +12,38 @@ import { computeQuote } from "../lib/quote";
 import { useStore } from "../lib/store";
 import type { Lot, QuoteItem } from "../lib/types";
 
+function todayInputValue() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function parseInputDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}
+
 export function Cotizador() {
   const { user } = useAuth();
-  const { company, currentProject, lots, refresh } = useStore();
+  const { company, projects, currentProject, setCurrentProjectId, lots, refresh } = useStore();
+  const [params, setParams] = useSearchParams();
+  const showMap = params.get("plano") === "1";
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [discounts, setDiscounts] = useState<Record<string, number>>({});
   const [clientName, setClientName] = useState("");
+  const [quoteDate, setQuoteDate] = useState(todayInputValue);
+  const dateRef = useRef<HTMLInputElement>(null);
   const [downPayment, setDownPayment] = useState(0);
+  const [terms, setTerms] = useState<number[]>([24, 36]);
+  const [manzana, setManzana] = useState("A");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  const manzanas = useMemo(() => [...new Set(lots.map((lot) => lot.manzana))].sort(), [lots]);
+  useEffect(() => {
+    if (manzanas.length && !manzanas.includes(manzana)) setManzana(manzanas[0]);
+  }, [manzanas, manzana]);
   const selectedLots = lots.filter((lot) => selectedIds.includes(lot.id));
   const items: QuoteItem[] = selectedLots.map((lot) => ({
     lotId: lot.id,
@@ -28,16 +53,12 @@ export function Cotizador() {
     price: lot.price,
     discount: discounts[lot.id] || 0,
   }));
-  const totals = useMemo(() => computeQuote(items, downPayment), [items, downPayment]);
+  const totals = useMemo(() => computeQuote(items, downPayment, terms), [items, downPayment, terms]);
+  const visibleLots = lots.filter((lot) => lot.manzana === manzana).sort((a, b) => a.numero - b.numero);
 
-  function toggleLot(lot: Lot, additive: boolean) {
+  function toggleLot(lot: Lot) {
     if (lot.status === "vendido") return;
-    setSelectedIds((current) => {
-      if (additive) {
-        return current.includes(lot.id) ? current.filter((id) => id !== lot.id) : [...current, lot.id];
-      }
-      return current.includes(lot.id) && current.length === 1 ? [] : [lot.id];
-    });
+    setSelectedIds((current) => (current.includes(lot.id) ? current.filter((id) => id !== lot.id) : [...current, lot.id]));
   }
 
   async function downloadPdf() {
@@ -67,6 +88,8 @@ export function Cotizador() {
           clientName={clientName}
           items={items}
           downPayment={downPayment}
+          terms={terms}
+          quoteDate={parseInputDate(quoteDate)}
           companyLogo={companyLogo}
           projectLogo={projectLogo}
         />,
@@ -86,84 +109,241 @@ export function Cotizador() {
     }
   }
 
-  if (!currentProject) return <p>Cargando proyecto...</p>;
+  if (!currentProject || !company) return <p>Cargando proyecto...</p>;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-brand-navy">Plano de {currentProject.name}</h1>
-            <p className="text-sm text-slate-500">Verde: disponible · Rojo: vendido. Click para agregar a la cotización.</p>
-          </div>
-          {currentProject.logoUrl && <img src={currentProject.logoUrl} alt="" className="h-12 object-contain" />}
-        </div>
-        <PlanMap
-          planUrl={currentProject.planUrl}
-          lots={lots}
-          tool="select"
-          mode="view"
-          selectedIds={selectedIds}
-          draftPoints={[]}
-          onDraftPoints={() => undefined}
-          onSelect={toggleLot}
-        />
-      </section>
-
-      <aside className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold text-brand-navy">Cotización</h2>
-        <label className="mb-3 block text-sm">
-          Cliente
-          <input className="mt-1 w-full rounded-lg border px-3 py-2" value={clientName} onChange={(event) => setClientName(event.target.value)} />
-        </label>
-        <div className="space-y-3">
-          {selectedLots.length === 0 && <p className="text-sm text-slate-500">Aún no hay lotes seleccionados.</p>}
-          {selectedLots.map((lot) => (
-            <div key={lot.id} className="rounded-lg border p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <strong>{lotCode(lot.manzana, lot.numero)}</strong>
-                <button className="text-red-600" onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== lot.id))}>
-                  Quitar
-                </button>
-              </div>
-              <p>{lot.areaM2.toFixed(2)} m² · {money(lot.price)}</p>
-              <label className="mt-2 block">
-                Descuento
-                <input
-                  type="number"
-                  min={0}
-                  className="mt-1 w-full rounded border px-2 py-1"
-                  value={discounts[lot.id] || 0}
-                  onChange={(event) => setDiscounts((current) => ({ ...current, [lot.id]: Number(event.target.value) }))}
-                />
+    <>
+      <div className="grid gap-4 xl:grid-cols-[minmax(280px,380px)_1fr]">
+        <div className="space-y-4">
+          <section className="app-card">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-300">1</span>
+              <h2 className="font-semibold">Proyecto y cliente</h2>
+            </div>
+            <label className="block text-xs text-[var(--muted)]">
+              Proyecto
+              <select className="app-input" value={currentProject.id} onChange={(event) => setCurrentProjectId(event.target.value)}>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+            </label>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs text-[var(--muted)]">
+                Nombre del cliente
+                <input className="app-input" value={clientName} onChange={(event) => setClientName(event.target.value)} />
+              </label>
+              <label className="text-xs text-[var(--muted)]">
+                Fecha
+                <div className="relative">
+                  <input
+                    ref={dateRef}
+                    type="date"
+                    className="app-input pr-12"
+                    value={quoteDate}
+                    onChange={(event) => setQuoteDate(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-1.5 top-[calc(50%+2px)] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-[var(--text)] hover:bg-white/20"
+                    onClick={() => {
+                      const input = dateRef.current;
+                      if (!input) return;
+                      if (typeof input.showPicker === "function") input.showPicker();
+                      else input.focus();
+                    }}
+                    title="Abrir calendario"
+                    aria-label="Abrir calendario"
+                  >
+                    <Calendar size={18} />
+                  </button>
+                </div>
               </label>
             </div>
-          ))}
+          </section>
+
+          <section className="app-card">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-300">2</span>
+              <h2 className="font-semibold">Selecciona lotes</h2>
+            </div>
+            <div className="mb-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {manzanas.map((item) => (
+                <button
+                  key={item}
+                  className={`chip ${manzana === item ? "bg-white text-brand-navy" : "bg-white/5 text-[var(--muted)]"}`}
+                  onClick={() => setManzana(item)}
+                >
+                  Mz {item}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {visibleLots.map((lot) => {
+                const selected = selectedIds.includes(lot.id);
+                const sold = lot.status === "vendido";
+                return (
+                  <button
+                    key={lot.id}
+                    disabled={sold}
+                    onClick={() => toggleLot(lot)}
+                    className={`rounded-xl border p-2 text-left ${
+                      sold
+                        ? "border-red-500/40 bg-red-950/40 text-red-200"
+                        : selected
+                          ? "border-amber-300/70 bg-amber-300/10"
+                          : "border-white/10 bg-white/5"
+                    }`}
+                  >
+                    <p className={`text-sm font-bold ${sold ? "text-red-300" : "text-amber-300"}`}>{lotCode(lot.manzana, lot.numero)}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{lot.areaM2.toFixed(2)} m²</p>
+                    <p className="text-[11px]">{money(lot.price)}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="app-card">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-300">3</span>
+              <h2 className="font-semibold">Lotes seleccionados</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-[var(--muted)]">
+                  <tr>
+                    <th className="p-1 text-left">Lote</th>
+                    <th className="p-1">Área</th>
+                    <th className="p-1">Precio</th>
+                    <th className="p-1">Desc.</th>
+                    <th className="p-1" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedLots.map((lot) => (
+                    <tr key={lot.id}>
+                      <td className="p-1 font-semibold text-amber-300">{lotCode(lot.manzana, lot.numero)}</td>
+                      <td className="p-1 text-center">{lot.areaM2.toFixed(2)}</td>
+                      <td className="p-1 text-center">{money(lot.price)}</td>
+                      <td className="p-1">
+                        <input
+                          type="number"
+                          min={0}
+                          className="app-input mt-0 w-20 py-1"
+                          value={discounts[lot.id] || 0}
+                          onChange={(event) => setDiscounts((current) => ({ ...current, [lot.id]: Number(event.target.value) }))}
+                        />
+                      </td>
+                      <td className="p-1">
+                        <button
+                          type="button"
+                          className="app-btn min-h-9 border border-white/15 px-3 text-xs"
+                          onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== lot.id))}
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <label className="mt-3 block text-xs text-[var(--muted)]">
+              Inicial del cliente (S/)
+              <input type="number" min={0} className="app-input" value={downPayment} onChange={(event) => setDownPayment(Number(event.target.value))} />
+            </label>
+            <div className="mt-3 space-y-1 text-sm">
+              <p>Total lista <span className="float-right">{money(totals.totalList)}</span></p>
+              <p>Total descuento <span className="float-right">{money(totals.totalDiscount)}</span></p>
+              <p>Inicial del cliente <span className="float-right">{money(downPayment)}</span></p>
+              <p className="font-semibold text-brand-gold">Saldo a financiar <span className="float-right">{money(totals.balance)}</span></p>
+            </div>
+          </section>
+
+          <section className="app-card">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-xs font-bold text-sky-300">4</span>
+              <h2 className="font-semibold">Plazos de financiamiento</h2>
+            </div>
+            <div className="space-y-2">
+              {terms.map((term, index) => (
+                <div key={`${term}-${index}`} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      className="app-input mt-0 min-w-0 flex-1"
+                      value={term}
+                      onChange={(event) => setTerms((current) => current.map((value, i) => (i === index ? Number(event.target.value) : value)))}
+                    />
+                    <button
+                      type="button"
+                      className="app-btn min-h-11 shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 text-sm"
+                      onClick={() => setTerms((current) => current.filter((_, i) => i !== index))}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                  <p className="text-xs text-[var(--muted)]">
+                    {term} meses ({(term / 12).toFixed(term % 12 === 0 ? 0 : 1)} años)
+                  </p>
+                </div>
+              ))}
+            </div>
+            <button className="mt-3 text-sm text-sky-300" onClick={() => setTerms((current) => [...current, 48])}>+ Agregar plazo</button>
+          </section>
         </div>
-        <label className="mt-4 block text-sm">
-          Inicial del cliente
-          <input
-            type="number"
-            min={0}
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            value={downPayment}
-            onChange={(event) => setDownPayment(Number(event.target.value))}
+
+        <section className="app-card overflow-x-auto">
+          <div className="no-print mb-3 flex flex-wrap justify-end gap-2">
+            <button className="app-btn app-btn-primary" onClick={() => { setSelectedIds([]); setDiscounts({}); setDownPayment(0); setClientName(""); setQuoteDate(todayInputValue()); }}>
+              <RotateCcw size={14} /> Limpiar todo
+            </button>
+            <button className="app-btn app-btn-primary" onClick={() => window.print()}>
+              <Printer size={14} /> Imprimir
+            </button>
+            <button disabled={busy} className="app-btn bg-white text-brand-navy" onClick={() => void downloadPdf()}>
+              {busy ? "Generando..." : "Descargar PDF"}
+            </button>
+          </div>
+          {message && <p className="no-print mb-3 text-sm text-emerald-300">{message}</p>}
+          <QuotePreview
+            company={company}
+            project={currentProject}
+            clientName={clientName}
+            items={items}
+            downPayment={downPayment}
+            terms={terms}
+            quoteDate={parseInputDate(quoteDate)}
           />
-        </label>
-        <div className="mt-4 space-y-1 text-sm">
-          <p>Total lista: {money(totals.totalList)}</p>
-          <p>Total descuento: {money(totals.totalDiscount)}</p>
-          <p className="font-semibold">Total con descuento: {money(totals.totalFinal)}</p>
-          <p>Saldo: {money(totals.balance)}</p>
-          <p>Cuota 24 meses: {money(totals.installment24)}</p>
-          <p>Cuota 36 meses: {money(totals.installment36)}</p>
+        </section>
+      </div>
+
+      {showMap && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0b1220]/95 p-3" style={{ paddingTop: "max(0.75rem, var(--safe-top))", paddingBottom: "max(0.75rem, var(--safe-bottom))" }}>
+          <div className="no-print mb-2 flex items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold">Plano de lotización · {currentProject.name}</p>
+              <p className="text-xs text-[var(--muted)]">Pasa el puntero sobre un lote para ver precio y disponibilidad. Espacio + arrastrar para mover.</p>
+            </div>
+            <button className="app-btn bg-white text-brand-navy" onClick={() => setParams({})}>Cerrar</button>
+          </div>
+          <div className="min-h-0 flex-1">
+            <PlanMap
+              planUrl={currentProject.planUrl}
+              lots={lots}
+              tool="select"
+              mode="view"
+              selectedIds={selectedIds}
+              draftPoints={[]}
+              onDraftPoints={() => undefined}
+              onSelect={(lot) => toggleLot(lot)}
+              containerClassName="h-[calc(100dvh-6.5rem)] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-200"
+            />
+          </div>
         </div>
-        {company?.ruc && <p className="mt-2 text-xs text-slate-500">RUC {company.ruc}</p>}
-        {message && <p className="mt-3 text-sm text-brand-green">{message}</p>}
-        <button disabled={busy} className="mt-4 w-full rounded-lg bg-brand-navy py-2 text-white" onClick={() => void downloadPdf()}>
-          {busy ? "Generando..." : "Descargar cotización PDF"}
-        </button>
-      </aside>
-    </div>
+      )}
+    </>
   );
 }

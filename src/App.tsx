@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/RequireAuth";
 import { AuthProvider } from "./lib/auth";
 import { StoreProvider } from "./lib/store";
+import { ThemeProvider } from "./lib/theme";
 import { AdminEmpresa } from "./pages/AdminEmpresa";
 import { AdminMapa } from "./pages/AdminMapa";
 import { AdminPrecios } from "./pages/AdminPrecios";
@@ -12,9 +13,10 @@ import { Login } from "./pages/Login";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <StoreProvider>
-        <BrowserRouter>
+    <ThemeProvider>
+      <AuthProvider>
+        <StoreProvider>
+          <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth />}>
@@ -31,7 +33,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </StoreProvider>
-    </AuthProvider>
+        </StoreProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

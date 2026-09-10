@@ -33,8 +33,8 @@ export function AdminUsuarios() {
   }
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <h1 className="mb-4 text-xl font-semibold text-brand-navy">Usuarios</h1>
+    <section className="app-card">
+      <h1 className="mb-4 text-xl font-semibold">Usuarios</h1>
       <form className="mb-6 grid gap-2 md:grid-cols-4" onSubmit={(event) => void create(event)}>
         <input className="rounded border px-3 py-2" placeholder="Nombre" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
         <input className="rounded border px-3 py-2" type="email" placeholder="Correo" value={email} onChange={(event) => setEmail(event.target.value)} required />

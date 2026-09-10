@@ -6,9 +6,11 @@ export default {
       colors: {
         brand: {
           navy: "#0f2744",
-          gold: "#c6a04a",
+          gold: "#d4b36a",
           green: "#1f6b3a",
           cream: "#f7f4ee",
+          night: "#0b1220",
+          panel: "#141c2c",
         },
       },
       fontFamily: {
