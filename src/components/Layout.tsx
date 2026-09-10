@@ -1,7 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Building2, FileSpreadsheet, LogOut, Map, Table2, Users } from "lucide-react";
 import { useAuth } from "../lib/auth";
-import { useStore } from "../lib/store";
 import { useTheme, type ThemeMode } from "../lib/theme";
 
 const themes: { id: ThemeMode; label: string }[] = [
@@ -12,7 +11,6 @@ const themes: { id: ThemeMode; label: string }[] = [
 
 export function Layout() {
   const { user, logout } = useAuth();
-  const { currentProject } = useStore();
   const { mode, setMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,23 +43,26 @@ export function Layout() {
           <NavLink to="/?plano=1" className="app-btn app-btn-primary">
             <Map size={16} /> Ver plano de lotización
           </NavLink>
-          {user?.role === "admin" && (
-            <NavLink to="/admin/mapa" className={`app-btn ${isAdminPage ? "bg-white text-brand-navy" : "app-btn-primary"}`}>
-              Modo administrador
+          {user?.role === "admin" ? (
+            <NavLink to="/admin/mapa" className={`ml-auto app-btn ${isAdminPage ? "bg-white text-brand-navy" : "app-btn-primary"}`}>
+              Admin
+            </NavLink>
+          ) : (
+            <NavLink to="/login" className="ml-auto app-btn app-btn-primary">
+              Admin
             </NavLink>
           )}
-          <span className="ml-auto hidden text-xs text-[var(--muted)] sm:inline">
-            {user?.fullName} · {user?.role} · {currentProject?.name}
-          </span>
-          <button
-            className="app-btn app-btn-primary"
-            onClick={async () => {
-              await logout();
-              navigate("/login");
-            }}
-          >
-            <LogOut size={16} />
-          </button>
+          {user?.role === "admin" ? (
+            <button
+              className="app-btn app-btn-primary"
+              onClick={async () => {
+                await logout();
+                navigate("/");
+              }}
+            >
+              <LogOut size={16} />
+            </button>
+          ) : null}
         </div>
         {user?.role === "admin" && isAdminPage && (
           <nav className="mt-3 flex flex-wrap gap-2">
@@ -81,9 +82,7 @@ export function Layout() {
         {user?.role === "admin" ? (
           <NavLink to="/admin/mapa" className="flex flex-col items-center gap-1 py-1 text-[11px]"><Building2 size={18} /> Admin</NavLink>
         ) : (
-          <button className="flex flex-col items-center gap-1 py-1 text-[11px]" onClick={() => document.getElementById("quote-paper")?.scrollIntoView({ behavior: "smooth" })}>
-            <FileSpreadsheet size={18} /> PDF
-          </button>
+          <NavLink to="/login" className="flex flex-col items-center gap-1 py-1 text-[11px]"><Building2 size={18} /> Admin</NavLink>
         )}
       </nav>
     </div>

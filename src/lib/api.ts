@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { computeQuote } from "./quote";
 import { supabase, useSupabase } from "./supabase";
 import { getStore, toPublicUser, updateStore } from "./storage";
@@ -302,7 +303,7 @@ export async function listQuotes(projectId?: string): Promise<Quote[]> {
     let query = supabase.from("quotes").select("*").order("created_at", { ascending: false });
     if (projectId) query = query.eq("project_id", projectId);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) return [];
     return (data || []).map(mapQuote);
   }
   const quotes = (await getStore()).quotes;
@@ -338,8 +339,19 @@ export async function updateProfileRole(id: string, role: Role): Promise<Profile
 }
 
 export async function createAdvisor(email: string, password: string, fullName: string): Promise<Profile> {
-  if (useSupabase && supabase) {
-    throw new Error("En modo Supabase, crea el usuario desde Authentication y asígnale rol en esta pantalla.");
+  if (useSupabase) {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const helper = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data, error } = await helper.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    if (error || !data.user) throw new Error(error?.message || "No se pudo crear el asesor");
+    return fetchSupabaseProfile(data.user.id, email, fullName);
   }
   const store = await getStore();
   if (store.users.some((item) => item.email.toLowerCase() === email.toLowerCase())) {

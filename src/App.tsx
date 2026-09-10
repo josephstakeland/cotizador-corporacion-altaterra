@@ -17,9 +17,8 @@ export default function App() {
       <AuthProvider>
         <StoreProvider>
           <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<RequireAuth />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
               <Route element={<Layout />}>
                 <Route path="/" element={<Cotizador />} />
                 <Route element={<RequireAuth admin />}>
@@ -29,10 +28,9 @@ export default function App() {
                   <Route path="/admin/usuarios" element={<AdminUsuarios />} />
                 </Route>
               </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
         </StoreProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -22,12 +22,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const [nextCompany, nextProjects, nextLots, nextQuotes] = await Promise.all([
+    const [nextCompany, nextProjects, nextLots] = await Promise.all([
       api.getCompany(),
       api.listProjects(),
       api.listLots(),
-      api.listQuotes(),
     ]);
+    let nextQuotes: Quote[] = [];
+    try {
+      nextQuotes = await api.listQuotes();
+    } catch {
+      nextQuotes = [];
+    }
     setCompany(nextCompany);
     setProjects(nextProjects);
     setLots(nextLots);

@@ -62,7 +62,7 @@ export function Cotizador() {
   }
 
   async function downloadPdf() {
-    if (!company || !currentProject || !user) return;
+    if (!company || !currentProject) return;
     if (!clientName.trim() || items.length === 0) {
       setMessage("Selecciona lotes disponibles y escribe el nombre del cliente.");
       return;
@@ -74,13 +74,15 @@ export function Cotizador() {
         urlToDataUrl(company.logoUrl),
         urlToDataUrl(currentProject.logoUrl),
       ]);
-      await api.saveQuote({
-        projectId: currentProject.id,
-        advisorId: user.id,
-        clientName,
-        downPayment,
-        items,
-      });
+      if (user) {
+        await api.saveQuote({
+          projectId: currentProject.id,
+          advisorId: user.id,
+          clientName,
+          downPayment,
+          items,
+        });
+      }
       const blob = await pdf(
         <CotizacionPdf
           company={company}
