@@ -7,7 +7,8 @@ import { CotizacionPdf } from "../components/quote/CotizacionPdf";
 import { QuotePreview } from "../components/quote/QuotePreview";
 import * as api from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { downloadUrlAsFile, extensionFromUrl, lotCode, money, urlToDataUrl } from "../lib/money";
+import { lotCode, money, urlToDataUrl } from "../lib/money";
+import { exportMarkedPlanPdf } from "../lib/plan-export";
 import { computeQuote } from "../lib/quote";
 import { useStore } from "../lib/store";
 import type { Lot, QuoteItem } from "../lib/types";
@@ -121,12 +122,21 @@ export function Cotizador() {
     setDownloadingPlan(true);
     setMessage("");
     try {
-      const ext = extensionFromUrl(currentProject.planUrl);
-      await downloadUrlAsFile(currentProject.planUrl, `Plano_${currentProject.slug}.${ext}`);
-      setMessage("Plano descargado.");
+      const blob = await exportMarkedPlanPdf({
+        planUrl: currentProject.planUrl,
+        lots,
+        selectedIds,
+        projectName: currentProject.name,
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Plano_${currentProject.slug}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMessage("Plano PDF descargado.");
     } catch (error) {
-      window.open(currentProject.planUrl, "_blank", "noopener,noreferrer");
-      setMessage(error instanceof Error ? error.message : "Se abrió el plano en una pestaña nueva.");
+      setMessage(error instanceof Error ? error.message : "No se pudo generar el PDF del plano");
     } finally {
       setDownloadingPlan(false);
     }
@@ -384,7 +394,7 @@ export function Cotizador() {
                 disabled={downloadingPlan}
                 onClick={() => void downloadPlan()}
               >
-                <Download size={14} /> {downloadingPlan ? "Descargando..." : "Descargar plano"}
+                <Download size={14} /> {downloadingPlan ? "Generando PDF..." : "Descargar PDF"}
               </button>
               <button className="app-btn bg-white text-brand-navy" onClick={() => setParams({})}>Cerrar</button>
             </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Circle, Group, Image as KonvaImage, Layer, Line, Rect, Stage, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { lotCode, money } from "../../lib/money";
+import { lotFill, lotStroke } from "../../lib/plan-style";
 import type { Lot, Point } from "../../lib/types";
 import { useHtmlImage } from "../../lib/useHtmlImage";
 
@@ -367,7 +368,7 @@ export function PlanMap({
             disabled={downloadBusy}
             onClick={onDownload}
           >
-            {downloadBusy ? "Descargando..." : "Descargar plano"}
+            {downloadBusy ? "Generando PDF..." : "Descargar PDF"}
           </button>
         ) : null}
         <span className="text-xs text-[var(--muted)]">{hint}</span>
@@ -415,15 +416,15 @@ export function PlanMap({
                 if (reshapeLotId && lot.id === reshapeLotId) return null;
                 const selected = selectedIds.includes(lot.id);
                 const hovered = hover?.lot.id === lot.id;
-                const fill = lot.status === "vendido" ? "rgba(220,38,38,0.45)" : "rgba(34,197,94,0.42)";
-                const stroke = selected ? "#ca8a04" : hovered ? "#f5d48a" : lot.status === "vendido" ? "#991b1b" : "#15803d";
+                const fill = lotFill(lot.status, hovered);
+                const stroke = lotStroke(lot, selected, hovered);
                 const center = centroid(lot.polygon);
                 return (
                   <Group key={lot.id}>
                     <Line
                       points={toFlat(lot.polygon, imgW, imgH)}
                       closed
-                      fill={hovered ? (lot.status === "vendido" ? "rgba(220,38,38,0.62)" : "rgba(34,197,94,0.62)") : fill}
+                      fill={fill}
                       stroke={stroke}
                       strokeWidth={(selected || hovered ? 5 : 2) / groupScale}
                       onMouseEnter={(event) => {
