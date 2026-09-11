@@ -1,4 +1,4 @@
-const CACHE = "altaterra-cotizador-v3";
+const CACHE = "altaterra-cotizador-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

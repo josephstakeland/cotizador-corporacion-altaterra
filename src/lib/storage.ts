@@ -62,18 +62,47 @@ const EXTRA_PROJECTS: { project: Project; lots: Lot[] }[] = [
   },
 ];
 
+function normalizeKey(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function isCatalogMatch(project: Project, extra: Project) {
+  if (project.id === extra.id || project.slug === extra.slug) return true;
+  const key = normalizeKey(`${project.name} ${project.slug}`);
+  const extraKey = normalizeKey(`${extra.name} ${extra.slug}`);
+  if (extraKey.includes("campoverde")) return key.includes("campoverde");
+  if (extraKey.includes("paraiso")) return key.includes("paraiso");
+  return false;
+}
+
+function syncCatalogLots(store: LocalStore, projectId: string, seed: Lot[]) {
+  const existing = store.lots.filter((lot) => lot.projectId === projectId);
+  const have = new Set(existing.map((lot) => `${lot.manzana}-${lot.numero}`));
+  for (const lot of seed) {
+    if (have.has(`${lot.manzana}-${lot.numero}`)) continue;
+    store.lots.push({ ...lot, projectId });
+  }
+}
+
 function ensureCatalog(store: LocalStore) {
+  if (!Array.isArray(store.projects)) store.projects = [];
+  if (!Array.isArray(store.lots)) store.lots = [];
   for (const extra of EXTRA_PROJECTS) {
-    const existing = store.projects.find((project) => project.id === extra.project.id || project.slug === extra.project.slug);
-    if (!existing) store.projects.push({ ...extra.project });
-    else {
-      if (!existing.logoUrl) existing.logoUrl = extra.project.logoUrl;
-      if (!existing.planUrl) existing.planUrl = extra.project.planUrl;
+    let existing = store.projects.find((project) => isCatalogMatch(project, extra.project));
+    if (!existing) {
+      existing = { ...extra.project };
+      store.projects.push(existing);
+    } else {
+      existing.name = extra.project.name;
+      existing.slug = extra.project.slug;
+      existing.logoUrl = extra.project.logoUrl;
+      existing.planUrl = extra.project.planUrl;
     }
-    const projectId = existing?.id || extra.project.id;
-    if (!store.lots.some((lot) => lot.projectId === projectId)) {
-      store.lots.push(...extra.lots.map((lot) => ({ ...lot, projectId })));
-    }
+    syncCatalogLots(store, existing.id, extra.lots);
   }
 }
 
@@ -160,7 +189,11 @@ export async function loadStore(): Promise<LocalStore> {
         memory.company = { ...memory.company, phone: "" };
       }
       ensureCatalog(memory);
-      localStorage.setItem(KEY, JSON.stringify(memory));
+      try {
+        localStorage.setItem(KEY, JSON.stringify(memory));
+      } catch {
+        // Keep the in-memory catalog even if localStorage is full (data-URL assets).
+      }
       return memory;
     }
     const store = defaultStore(await sha256("Admin123!"), await sha256("Asesor123!"));
@@ -173,7 +206,11 @@ export async function loadStore(): Promise<LocalStore> {
 
 function persist(store: LocalStore) {
   memory = store;
-  localStorage.setItem(KEY, JSON.stringify(store));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(store));
+  } catch {
+    // Ignore quota errors so catalog lots still work in the current session.
+  }
 }
 
 export async function getStore(): Promise<LocalStore> {
