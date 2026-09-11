@@ -1,0 +1,14 @@
+---
+description: Tras cada cambio, hacer commit y push a origin
+alwaysApply: true
+---
+
+# Commit y push en cada cambio
+
+Cuando termines un cambio de código o de archivos del repo (arreglo, feature, assets, config):
+
+1. Crea un commit git con mensaje en español, corto, al estilo del repo.
+2. Haz `git push origin HEAD` (o `git push -u origin HEAD` si la rama no tiene upstream).
+3. No esperes a que el usuario lo pida en cada turno.
+
+No actualices `git config`. No uses `--force` ni `--no-verify`. No hagas push a main/master con force.
