@@ -2,8 +2,33 @@ import { createClient } from "@supabase/supabase-js";
 import { computeQuote } from "./quote";
 import { supabase, useSupabase } from "./supabase";
 import { getStore, toPublicUser, updateStore } from "./storage";
-import { fileToDataUrl, newId, sha256 } from "./money";
+import { newId, sha256 } from "./money";
+import { blobToDataUrl, preparePlanFile } from "./plan-file";
 import type { Company, Lot, LotStatus, Point, Profile, Project, Quote, QuoteItem, Role } from "./types";
+
+export async function persistAsset(path: string, blob: Blob, contentType: string): Promise<string> {
+  if (useSupabase && supabase) {
+    const { error } = await supabase.storage.from("assets").upload(path, blob, {
+      upsert: true,
+      contentType,
+      cacheControl: "3600",
+    });
+    if (error) throw new Error(error.message);
+    const { data } = supabase.storage.from("assets").getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  }
+  return blobToDataUrl(blob);
+}
+
+function projectSlug(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export async function login(email: string, password: string): Promise<Profile> {
   if (useSupabase && supabase) {
@@ -114,13 +139,26 @@ export async function createProject(input: {
   planFile?: File | null;
 }): Promise<Project> {
   const company = await getCompany();
-  const logoUrl = input.logoFile ? await fileToDataUrl(input.logoFile) : "/logos/bosques-del-sol-ii.png";
-  const planUrl = input.planFile ? await fileToDataUrl(input.planFile) : "";
+  const projectId = newId();
+  let logoUrl = "/logos/bosques-del-sol-ii.png";
+  let planUrl = "";
+  if (input.logoFile) {
+    const ext = input.logoFile.name.split(".").pop()?.toLowerCase() || "png";
+    logoUrl = await persistAsset(
+      `projects/${projectId}/logo.${ext}`,
+      input.logoFile,
+      input.logoFile.type || "image/png",
+    );
+  }
+  if (input.planFile) {
+    const plan = await preparePlanFile(input.planFile);
+    planUrl = await persistAsset(`projects/${projectId}/plan.${plan.ext}`, plan.blob, plan.contentType);
+  }
   const project: Project = {
-    id: newId(),
+    id: projectId,
     companyId: company.id,
-    name: input.name,
-    slug: input.name.toLowerCase().replace(/\s+/g, "-"),
+    name: input.name.trim(),
+    slug: projectSlug(input.name),
     logoUrl,
     planUrl,
   };
