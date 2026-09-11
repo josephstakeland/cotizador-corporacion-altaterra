@@ -7,20 +7,22 @@ export function AdminEmpresa() {
   const { company, currentProject, refresh } = useStore();
   const [name, setName] = useState(company?.name || "");
   const [ruc, setRuc] = useState(company?.ruc || "");
+  const [phone, setPhone] = useState(company?.phone || "");
 
   useEffect(() => {
     if (company) {
       setName(company.name);
       setRuc(company.ruc);
+      setPhone(company.phone || "");
     }
   }, [company]);
   const [projectName, setProjectName] = useState("");
   const [message, setMessage] = useState("");
 
   async function saveCompany() {
-    await api.updateCompany({ name, ruc });
+    await api.updateCompany({ name, ruc, phone });
     await refresh();
-    setMessage("Empresa actualizada. El RUC aparecerá en la cotización.");
+    setMessage("Empresa actualizada. El RUC y el teléfono aparecerán en la cotización.");
   }
 
   async function uploadCompanyLogo(file: File) {
@@ -59,6 +61,10 @@ export function AdminEmpresa() {
         <label className="mb-3 block text-sm">
           RUC
           <input className="app-input" value={ruc} onChange={(event) => setRuc(event.target.value)} placeholder="Ingresa el RUC para la cotización" />
+        </label>
+        <label className="mb-3 block text-sm">
+          Número de teléfono de la empresa
+          <input className="app-input" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Ej. 044 123 456 / 999 888 777" />
         </label>
         <label className="mb-4 block text-sm">
           Logo de la empresa

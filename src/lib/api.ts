@@ -84,6 +84,7 @@ export async function updateCompany(patch: Partial<Company>): Promise<Company> {
       .update({
         name: patch.name ?? current.name,
         ruc: patch.ruc ?? current.ruc,
+        phone: patch.phone ?? current.phone,
         logo_url: patch.logoUrl ?? current.logoUrl,
       })
       .eq("id", current.id)
@@ -254,7 +255,10 @@ export async function createLot(input: {
 export async function saveQuote(input: {
   projectId: string;
   advisorId: string;
+  advisorName: string;
   clientName: string;
+  clientPhone: string;
+  clientDni: string;
   downPayment: number;
   items: QuoteItem[];
 }): Promise<Quote> {
@@ -263,7 +267,10 @@ export async function saveQuote(input: {
     id: newId(),
     projectId: input.projectId,
     advisorId: input.advisorId,
+    advisorName: input.advisorName,
     clientName: input.clientName,
+    clientPhone: input.clientPhone,
+    clientDni: input.clientDni,
     downPayment: input.downPayment,
     items: input.items,
     totalList: totals.totalList,
@@ -279,7 +286,10 @@ export async function saveQuote(input: {
         id: quote.id,
         project_id: quote.projectId,
         advisor_id: quote.advisorId,
+        advisor_name: quote.advisorName,
         client_name: quote.clientName,
+        client_phone: quote.clientPhone,
+        client_dni: quote.clientDni,
         down_payment: quote.downPayment,
         items: quote.items,
         total_list: quote.totalList,
@@ -382,6 +392,7 @@ function mapCompany(row: Record<string, unknown>): Company {
     id: String(row.id),
     name: String(row.name),
     ruc: String(row.ruc || ""),
+    phone: String(row.phone || ""),
     logoUrl: String(row.logo_url || "/logos/altaterra.png"),
   };
 }
@@ -415,7 +426,10 @@ function mapQuote(row: Record<string, unknown>): Quote {
     id: String(row.id),
     projectId: String(row.project_id),
     advisorId: String(row.advisor_id),
+    advisorName: String(row.advisor_name || ""),
     clientName: String(row.client_name),
+    clientPhone: String(row.client_phone || ""),
+    clientDni: String(row.client_dni || ""),
     downPayment: Number(row.down_payment),
     items: (row.items as QuoteItem[]) || [],
     totalList: Number(row.total_list),

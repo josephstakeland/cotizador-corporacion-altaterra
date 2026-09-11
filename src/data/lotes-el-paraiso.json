@@ -1,0 +1,560 @@
+[
+  {
+    "manzana": "A",
+    "numero": 1,
+    "area_m2": 130,
+    "price": 60000
+  },
+  {
+    "manzana": "A",
+    "numero": 2,
+    "area_m2": 105,
+    "price": 39500
+  },
+  {
+    "manzana": "A",
+    "numero": 3,
+    "area_m2": 105,
+    "price": 39500
+  },
+  {
+    "manzana": "A",
+    "numero": 4,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 5,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 6,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 7,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 8,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 9,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "A",
+    "numero": 10,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 11,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 12,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 13,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 14,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 15,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "A",
+    "numero": 16,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "A",
+    "numero": 17,
+    "area_m2": 95,
+    "price": 39350
+  },
+  {
+    "manzana": "B",
+    "numero": 1,
+    "area_m2": 100,
+    "price": 48000
+  },
+  {
+    "manzana": "B",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "B",
+    "numero": 3,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "B",
+    "numero": 4,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "B",
+    "numero": 5,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "C",
+    "numero": 1,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "C",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "C",
+    "numero": 3,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "C",
+    "numero": 4,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "C",
+    "numero": 5,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "C",
+    "numero": 6,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "C",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "C",
+    "numero": 8,
+    "area_m2": 100,
+    "price": 43000
+  },
+  {
+    "manzana": "C",
+    "numero": 9,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "C",
+    "numero": 10,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "C",
+    "numero": 11,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "C",
+    "numero": 12,
+    "area_m2": 100,
+    "price": 43000
+  },
+  {
+    "manzana": "D",
+    "numero": 1,
+    "area_m2": 105,
+    "price": 42650
+  },
+  {
+    "manzana": "D",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "D",
+    "numero": 3,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "D",
+    "numero": 4,
+    "area_m2": 110,
+    "price": 46500
+  },
+  {
+    "manzana": "D",
+    "numero": 5,
+    "area_m2": 95,
+    "price": 41250
+  },
+  {
+    "manzana": "D",
+    "numero": 6,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "D",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "D",
+    "numero": 8,
+    "area_m2": 90,
+    "price": 37700
+  },
+  {
+    "manzana": "E",
+    "numero": 1,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 3,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 4,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 5,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 6,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 8,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 9,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 10,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 11,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 12,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 13,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "E",
+    "numero": 14,
+    "area_m2": 90,
+    "price": 44000
+  },
+  {
+    "manzana": "F",
+    "numero": 1,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "F",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 3,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "F",
+    "numero": 4,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 5,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 6,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 8,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 9,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "F",
+    "numero": 10,
+    "area_m2": 90,
+    "price": 39500
+  },
+  {
+    "manzana": "F",
+    "numero": 11,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 12,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 13,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 14,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "F",
+    "numero": 15,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 1,
+    "area_m2": 90,
+    "price": 37700
+  },
+  {
+    "manzana": "G",
+    "numero": 2,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 3,
+    "area_m2": 100,
+    "price": 43000
+  },
+  {
+    "manzana": "G",
+    "numero": 4,
+    "area_m2": 100,
+    "price": 38000
+  },
+  {
+    "manzana": "G",
+    "numero": 5,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "G",
+    "numero": 6,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 8,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 9,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 10,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 11,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 12,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "G",
+    "numero": 13,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "H",
+    "numero": 1,
+    "area_m2": 95,
+    "price": 46000
+  },
+  {
+    "manzana": "H",
+    "numero": 2,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "H",
+    "numero": 3,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "H",
+    "numero": 4,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "H",
+    "numero": 5,
+    "area_m2": 95,
+    "price": 36500
+  },
+  {
+    "manzana": "H",
+    "numero": 6,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "H",
+    "numero": 7,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "H",
+    "numero": 8,
+    "area_m2": 90,
+    "price": 35000
+  },
+  {
+    "manzana": "H",
+    "numero": 9,
+    "area_m2": 95,
+    "price": 39350
+  }
+]

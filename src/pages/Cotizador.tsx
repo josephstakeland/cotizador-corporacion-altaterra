@@ -34,6 +34,9 @@ export function Cotizador() {
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [discounts, setDiscounts] = useState<Record<string, number>>({});
   const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientDni, setClientDni] = useState("");
+  const [advisorName, setAdvisorName] = useState("");
   const [quoteDate, setQuoteDate] = useState(todayInputValue);
   const dateRef = useRef<HTMLInputElement>(null);
   const [downPayment, setDownPayment] = useState(0);
@@ -47,6 +50,9 @@ export function Cotizador() {
   useEffect(() => {
     if (manzanas.length && !manzanas.includes(manzana)) setManzana(manzanas[0]);
   }, [manzanas, manzana]);
+  useEffect(() => {
+    if (user?.fullName) setAdvisorName((current) => current || user.fullName);
+  }, [user]);
   const selectedLots = lots.filter((lot) => selectedIds.includes(lot.id));
   const items: QuoteItem[] = selectedLots.map((lot) => ({
     lotId: lot.id,
@@ -81,7 +87,10 @@ export function Cotizador() {
         await api.saveQuote({
           projectId: currentProject.id,
           advisorId: user.id,
+          advisorName,
           clientName,
+          clientPhone,
+          clientDni,
           downPayment,
           items,
         });
@@ -91,6 +100,9 @@ export function Cotizador() {
           company={company}
           project={currentProject}
           clientName={clientName}
+          clientPhone={clientPhone}
+          clientDni={clientDni}
+          advisorName={advisorName}
           items={items}
           downPayment={downPayment}
           terms={terms}
@@ -165,6 +177,18 @@ export function Cotizador() {
               <label className="text-xs text-[var(--muted)]">
                 Nombre del cliente
                 <input className="app-input" value={clientName} onChange={(event) => setClientName(event.target.value)} />
+              </label>
+              <label className="text-xs text-[var(--muted)]">
+                DNI del cliente
+                <input className="app-input" value={clientDni} onChange={(event) => setClientDni(event.target.value)} inputMode="numeric" />
+              </label>
+              <label className="text-xs text-[var(--muted)]">
+                Número del cliente
+                <input className="app-input" value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} inputMode="tel" />
+              </label>
+              <label className="text-xs text-[var(--muted)]">
+                Nombre del asesor
+                <input className="app-input" value={advisorName} onChange={(event) => setAdvisorName(event.target.value)} />
               </label>
               <label className="text-xs text-[var(--muted)]">
                 Fecha
@@ -357,7 +381,7 @@ export function Cotizador() {
 
         <section className="app-card overflow-x-auto">
           <div className="no-print mb-3 flex flex-wrap justify-end gap-2">
-            <button className="app-btn app-btn-primary" onClick={() => { setSelectedIds([]); setPrices({}); setDiscounts({}); setDownPayment(0); setClientName(""); setQuoteDate(todayInputValue()); }}>
+            <button className="app-btn app-btn-primary" onClick={() => { setSelectedIds([]); setPrices({}); setDiscounts({}); setDownPayment(0); setClientName(""); setClientPhone(""); setClientDni(""); setAdvisorName(user?.fullName || ""); setQuoteDate(todayInputValue()); }}>
               <RotateCcw size={14} /> Limpiar todo
             </button>
             <button className="app-btn app-btn-primary" onClick={() => window.print()}>
@@ -372,6 +396,9 @@ export function Cotizador() {
             company={company}
             project={currentProject}
             clientName={clientName}
+            clientPhone={clientPhone}
+            clientDni={clientDni}
+            advisorName={advisorName}
             items={items}
             downPayment={downPayment}
             terms={terms}

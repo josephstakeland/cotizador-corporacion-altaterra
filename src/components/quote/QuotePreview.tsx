@@ -6,13 +6,31 @@ type Props = {
   company: Company;
   project: Project;
   clientName: string;
+  clientPhone: string;
+  clientDni: string;
+  advisorName: string;
   items: QuoteItem[];
   downPayment: number;
   terms: number[];
   quoteDate: Date;
 };
 
-export function QuotePreview({ company, project, clientName, items, downPayment, terms, quoteDate }: Props) {
+function dash(value?: string) {
+  return value?.trim() || "________________";
+}
+
+export function QuotePreview({
+  company,
+  project,
+  clientName,
+  clientPhone,
+  clientDni,
+  advisorName,
+  items,
+  downPayment,
+  terms,
+  quoteDate,
+}: Props) {
   const totals = computeQuote(items, downPayment, terms);
   const lotLabel = items.map((item) => lotCode(item.manzana, item.numero)).join(", ");
   const manzanas = [...new Set(items.map((item) => item.manzana))].join(", ");
@@ -29,13 +47,18 @@ export function QuotePreview({ company, project, clientName, items, downPayment,
           <h2 className="text-xl font-extrabold tracking-wide text-[#0f2744] sm:text-2xl">COTIZACIÓN</h2>
           <p className="text-sm font-bold text-[#1f6b3a]">{project.name.toUpperCase()}</p>
           {company.ruc ? <p className="mt-0.5 text-xs text-[#122033]">RUC {company.ruc}</p> : null}
+          {company.phone ? <p className="mt-0.5 text-xs text-[#122033]">Tel. {company.phone}</p> : null}
         </div>
         <img src={project.logoUrl} alt="" className="h-14 w-14 object-contain sm:h-16 sm:w-16" />
       </header>
 
-      <div className="mb-3 flex flex-wrap justify-between gap-2 border-b border-slate-200 pb-2 text-sm">
-        <p>Cliente: <span className="font-medium">{clientName || "________________"}</span></p>
+      <div className="mb-3 grid grid-cols-1 gap-1 border-b border-slate-200 pb-2 text-sm sm:grid-cols-2">
+        <p>Cliente: <span className="font-medium">{dash(clientName)}</span></p>
+        <p>DNI: <span className="font-medium">{dash(clientDni)}</span></p>
+        <p>Teléfono del cliente: <span className="font-medium">{dash(clientPhone)}</span></p>
+        <p>Asesor: <span className="font-medium">{dash(advisorName)}</span></p>
         <p>Fecha: {formatLongDate(quoteDate)}</p>
+        <p>Teléfono de la empresa: <span className="font-medium">{dash(company.phone)}</span></p>
       </div>
       <p className="mb-4 text-center text-sm font-bold text-[#1f6b3a]">
         {items.length ? `MZ ${manzanas} · LOTES ${lotLabel}` : "Selecciona lotes para cotizar"}
@@ -133,7 +156,8 @@ export function QuotePreview({ company, project, clientName, items, downPayment,
       </p>
       <p className="mt-6 text-center text-[10px] tracking-wide text-slate-500">
         {company.name.toUpperCase()}
-        {company.ruc ? ` · RUC ${company.ruc}` : ""} · {project.name.toUpperCase()}
+        {company.ruc ? ` · RUC ${company.ruc}` : ""}
+        {company.phone ? ` · Tel. ${company.phone}` : ""} · {project.name.toUpperCase()}
       </p>
     </article>
   );

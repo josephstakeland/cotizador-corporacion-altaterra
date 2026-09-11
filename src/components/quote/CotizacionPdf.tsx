@@ -10,7 +10,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, color: "#0f2744", textAlign: "center", fontFamily: "Helvetica-Bold" },
   subtitle: { fontSize: 12, color: "#1f6b3a", textAlign: "center", marginTop: 4, fontFamily: "Helvetica-Bold" },
   ruc: { fontSize: 9, color: "#122033", textAlign: "center", marginTop: 3 },
-  meta: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: "#d6d3d1", paddingBottom: 8 },
+  meta: { marginTop: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: "#d6d3d1", paddingBottom: 8 },
+  metaRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  metaItem: { width: "48%" },
   lotsTitle: { color: "#1f6b3a", textAlign: "center", marginBottom: 10, fontFamily: "Helvetica-Bold" },
   section: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#0f2744", marginTop: 12, marginBottom: 6 },
   tableHeader: { flexDirection: "row", backgroundColor: "#0f2744", color: "white", padding: 5 },
@@ -27,6 +29,9 @@ type Props = {
   company: Company;
   project: Project;
   clientName: string;
+  clientPhone: string;
+  clientDni: string;
+  advisorName: string;
   items: QuoteItem[];
   downPayment: number;
   terms: number[];
@@ -35,7 +40,24 @@ type Props = {
   projectLogo: string;
 };
 
-export function CotizacionPdf({ company, project, clientName, items, downPayment, terms, quoteDate, companyLogo, projectLogo }: Props) {
+function dash(value?: string) {
+  return value?.trim() || "________________";
+}
+
+export function CotizacionPdf({
+  company,
+  project,
+  clientName,
+  clientPhone,
+  clientDni,
+  advisorName,
+  items,
+  downPayment,
+  terms,
+  quoteDate,
+  companyLogo,
+  projectLogo,
+}: Props) {
   const totals = computeQuote(items, downPayment, terms);
   const lotLabel = items.map((item) => lotCode(item.manzana, item.numero)).join(", ");
   const manzanas = [...new Set(items.map((item) => item.manzana))].join(", ");
@@ -49,13 +71,24 @@ export function CotizacionPdf({ company, project, clientName, items, downPayment
             <Text style={styles.title}>COTIZACIÓN</Text>
             <Text style={styles.subtitle}>{project.name.toUpperCase()}</Text>
             {company.ruc ? <Text style={styles.ruc}>RUC {company.ruc}</Text> : null}
+            {company.phone ? <Text style={styles.ruc}>Tel. {company.phone}</Text> : null}
           </View>
           <Image src={projectLogo} style={styles.logo} />
         </View>
 
         <View style={styles.meta}>
-          <Text>Cliente: {clientName || "________________"}</Text>
-          <Text>Fecha: {formatLongDate(quoteDate)}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaItem}>Cliente: {dash(clientName)}</Text>
+            <Text style={styles.metaItem}>DNI: {dash(clientDni)}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaItem}>Teléfono del cliente: {dash(clientPhone)}</Text>
+            <Text style={styles.metaItem}>Asesor: {dash(advisorName)}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaItem}>Fecha: {formatLongDate(quoteDate)}</Text>
+            <Text style={styles.metaItem}>Teléfono de la empresa: {dash(company.phone)}</Text>
+          </View>
         </View>
         <Text style={styles.lotsTitle}>MZ {manzanas} · LOTES {lotLabel}</Text>
 
@@ -138,7 +171,8 @@ export function CotizacionPdf({ company, project, clientName, items, downPayment
         </Text>
         <Text style={styles.footer}>
           {company.name.toUpperCase()}
-          {company.ruc ? `  ·  RUC ${company.ruc}` : ""}  ·  {project.name.toUpperCase()}
+          {company.ruc ? `  ·  RUC ${company.ruc}` : ""}
+          {company.phone ? `  ·  Tel. ${company.phone}` : ""}  ·  {project.name.toUpperCase()}
         </Text>
       </Page>
     </Document>

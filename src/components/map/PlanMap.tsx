@@ -385,6 +385,7 @@ export function PlanMap({
         <Stage
           width={size.width}
           height={size.height}
+          pixelRatio={typeof window !== "undefined" ? Math.max(2, window.devicePixelRatio || 1) : 2}
           onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

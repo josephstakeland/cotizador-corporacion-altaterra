@@ -7,6 +7,7 @@ export type Company = {
   id: string;
   name: string;
   ruc: string;
+  phone: string;
   logoUrl: string;
 };
 
@@ -50,7 +51,10 @@ export type Quote = {
   id: string;
   projectId: string;
   advisorId: string;
+  advisorName: string;
   clientName: string;
+  clientPhone: string;
+  clientDni: string;
   downPayment: number;
   items: QuoteItem[];
   totalList: number;

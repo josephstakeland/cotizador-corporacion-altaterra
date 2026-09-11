@@ -4,7 +4,7 @@ import { lotCode } from "./money";
 import { lotFill, lotStroke } from "./plan-style";
 import type { Lot, Point } from "./types";
 
-const MAX_SIDE = 3600;
+const MAX_SIDE = 5200;
 
 function centroid(points: Point[]): Point {
   return {
@@ -38,6 +38,8 @@ export async function renderMarkedPlanImage(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo dibujar el plano");
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.fillStyle = "#e8edf3";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(image, 0, 0, width, height);
@@ -76,7 +78,7 @@ export async function renderMarkedPlanImage(
     ctx.fillText(label, center.x * width, center.y * height);
   }
 
-  return { dataUrl: canvas.toDataURL("image/jpeg", 0.88), width, height };
+  return { dataUrl: canvas.toDataURL("image/jpeg", 0.94), width, height };
 }
 
 export async function exportMarkedPlanPdf(input: {
