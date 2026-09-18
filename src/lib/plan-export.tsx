@@ -13,14 +13,36 @@ function centroid(points: Point[]): Point {
   };
 }
 
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("No se pudo cargar el plano"));
-    image.src = url;
-  });
+async function loadImage(url: string): Promise<{ image: HTMLImageElement; revoke: () => void }> {
+  let src = url;
+  let objectUrl = "";
+  if (!url.startsWith("data:")) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("No se pudo cargar el plano");
+    const blob = await response.blob();
+    if (blob.type && !blob.type.startsWith("image/") && blob.type !== "application/octet-stream") {
+      throw new Error("No se pudo cargar el plano");
+    }
+    objectUrl = URL.createObjectURL(blob);
+    src = objectUrl;
+  }
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const next = new Image();
+      next.onload = () => resolve(next);
+      next.onerror = () => reject(new Error("No se pudo cargar el plano"));
+      next.src = src;
+    });
+    return {
+      image,
+      revoke: () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      },
+    };
+  } catch (error) {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
 }
 
 export async function renderMarkedPlanImage(
@@ -28,57 +50,61 @@ export async function renderMarkedPlanImage(
   lots: Lot[],
   selectedIds: string[],
 ): Promise<{ dataUrl: string; width: number; height: number }> {
-  const image = await loadImage(planUrl);
-  const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
-  const width = Math.max(1, Math.round(image.width * scale));
-  const height = Math.max(1, Math.round(image.height * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("No se pudo dibujar el plano");
+  const { image, revoke } = await loadImage(planUrl);
+  try {
+    const scale = Math.min(1, MAX_SIDE / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo dibujar el plano");
 
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.fillStyle = "#e8edf3";
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(image, 0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = "#e8edf3";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
 
-  const strokeW = Math.max(2, Math.round(Math.min(width, height) / 520));
-  const fontSize = Math.max(11, Math.round(Math.min(width, height) / 85));
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
+    const strokeW = Math.max(2, Math.round(Math.min(width, height) / 520));
+    const fontSize = Math.max(11, Math.round(Math.min(width, height) / 85));
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
 
-  for (const lot of lots) {
-    if (!lot.polygon || lot.polygon.length < 3) continue;
-    const selected = selectedIds.includes(lot.id);
-    ctx.beginPath();
-    lot.polygon.forEach((point, index) => {
-      const x = point.x * width;
-      const y = point.y * height;
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.closePath();
-    ctx.fillStyle = lotFill(lot.status);
-    ctx.fill();
-    ctx.strokeStyle = lotStroke(lot, selected);
-    ctx.lineWidth = selected ? strokeW * 2.2 : strokeW;
-    ctx.stroke();
+    for (const lot of lots) {
+      if (!lot.polygon || lot.polygon.length < 3) continue;
+      const selected = selectedIds.includes(lot.id);
+      ctx.beginPath();
+      lot.polygon.forEach((point, index) => {
+        const x = point.x * width;
+        const y = point.y * height;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = lotFill(lot.status);
+      ctx.fill();
+      ctx.strokeStyle = lotStroke(lot, selected);
+      ctx.lineWidth = selected ? strokeW * 2.2 : strokeW;
+      ctx.stroke();
 
-    const center = centroid(lot.polygon);
-    const label = lotCode(lot.manzana, lot.numero);
-    ctx.font = `bold ${fontSize}px Helvetica, Arial, sans-serif`;
-    ctx.lineWidth = Math.max(3, Math.round(fontSize / 4));
-    ctx.strokeStyle = "rgba(255,255,255,0.92)";
-    ctx.strokeText(label, center.x * width, center.y * height);
-    ctx.fillStyle = "#111827";
-    ctx.fillText(label, center.x * width, center.y * height);
+      const center = centroid(lot.polygon);
+      const label = lotCode(lot.manzana, lot.numero);
+      ctx.font = `bold ${fontSize}px Helvetica, Arial, sans-serif`;
+      ctx.lineWidth = Math.max(3, Math.round(fontSize / 4));
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.strokeText(label, center.x * width, center.y * height);
+      ctx.fillStyle = "#111827";
+      ctx.fillText(label, center.x * width, center.y * height);
+    }
+
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.94), width, height };
+  } finally {
+    revoke();
   }
-
-  return { dataUrl: canvas.toDataURL("image/jpeg", 0.94), width, height };
 }
 
 export async function exportMarkedPlanPdf(input: {

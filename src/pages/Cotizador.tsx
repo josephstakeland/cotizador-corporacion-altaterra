@@ -7,6 +7,7 @@ import { CotizacionPdf } from "../components/quote/CotizacionPdf";
 import { QuotePreview } from "../components/quote/QuotePreview";
 import * as api from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { preparePopupDownload, saveBlobFile } from "../lib/download";
 import { lotCode, money, urlToDataUrl } from "../lib/money";
 import { exportMarkedPlanPdf } from "../lib/plan-export";
 import { computeQuote } from "../lib/quote";
@@ -76,6 +77,8 @@ export function Cotizador() {
       setMessage("Selecciona lotes disponibles y escribe el nombre del cliente.");
       return;
     }
+    const filename = `Cotizacion_${currentProject.slug}_${clientName.replace(/\s+/g, "_")}.pdf`;
+    const popup = preparePopupDownload();
     setBusy(true);
     setMessage("");
     try {
@@ -84,16 +87,20 @@ export function Cotizador() {
         urlToDataUrl(currentProject.logoUrl),
       ]);
       if (user) {
-        await api.saveQuote({
-          projectId: currentProject.id,
-          advisorId: user.id,
-          advisorName,
-          clientName,
-          clientPhone,
-          clientDni,
-          downPayment,
-          items,
-        });
+        try {
+          await api.saveQuote({
+            projectId: currentProject.id,
+            advisorId: user.id,
+            advisorName,
+            clientName,
+            clientPhone,
+            clientDni,
+            downPayment,
+            items,
+          });
+        } catch {
+          // El PDF se descarga igual si no se pudo guardar el historial.
+        }
       }
       const blob = await pdf(
         <CotizacionPdf
@@ -111,15 +118,15 @@ export function Cotizador() {
           projectLogo={projectLogo}
         />,
       ).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Cotizacion_${currentProject.slug}_${clientName.replace(/\s+/g, "_")}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      await refresh();
+      saveBlobFile(blob, filename, popup);
+      try {
+        await refresh();
+      } catch {
+        // El archivo ya se descargó.
+      }
       setMessage("Cotización generada.");
     } catch (error) {
+      popup?.close();
       setMessage(error instanceof Error ? error.message : "No se pudo generar el PDF");
     } finally {
       setBusy(false);
@@ -131,6 +138,7 @@ export function Cotizador() {
       setMessage("Este proyecto no tiene plano para descargar.");
       return;
     }
+    const popup = preparePopupDownload();
     setDownloadingPlan(true);
     setMessage("");
     try {
@@ -140,14 +148,10 @@ export function Cotizador() {
         selectedIds,
         projectName: currentProject.name,
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Plano_${currentProject.slug}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+      saveBlobFile(blob, `Plano_${currentProject.slug}.pdf`, popup);
       setMessage("Plano PDF descargado.");
     } catch (error) {
+      popup?.close();
       setMessage(error instanceof Error ? error.message : "No se pudo generar el PDF del plano");
     } finally {
       setDownloadingPlan(false);
@@ -391,7 +395,11 @@ export function Cotizador() {
               {busy ? "Generando..." : "Descargar PDF"}
             </button>
           </div>
-          {message && <p className="no-print mb-3 text-sm text-emerald-300">{message}</p>}
+          {message && (
+            <p className={`no-print mb-3 text-sm ${/no se pudo|no tiene plano|selecciona/i.test(message) ? "text-amber-300" : "text-emerald-300"}`}>
+              {message}
+            </p>
+          )}
           <QuotePreview
             company={company}
             project={currentProject}
@@ -426,6 +434,11 @@ export function Cotizador() {
               <button className="app-btn bg-white text-brand-navy" onClick={() => setParams({})}>Cerrar</button>
             </div>
           </div>
+          {message ? (
+            <p className={`mb-2 text-sm ${/no se pudo|no tiene plano|selecciona/i.test(message) ? "text-amber-300" : "text-emerald-300"}`}>
+              {message}
+            </p>
+          ) : null}
           <div className="min-h-0 flex-1">
             <PlanMap
               planUrl={currentProject.planUrl}

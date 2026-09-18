@@ -66,14 +66,14 @@ export function CotizacionPdf({
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Image src={companyLogo} style={styles.logo} />
+          {companyLogo ? <Image src={companyLogo} style={styles.logo} /> : <View style={styles.logo} />}
           <View>
             <Text style={styles.title}>COTIZACIÓN</Text>
             <Text style={styles.subtitle}>{project.name.toUpperCase()}</Text>
             {company.ruc ? <Text style={styles.ruc}>RUC {company.ruc}</Text> : null}
             {company.phone ? <Text style={styles.ruc}>Tel. {company.phone}</Text> : null}
           </View>
-          <Image src={projectLogo} style={styles.logo} />
+          {projectLogo ? <Image src={projectLogo} style={styles.logo} /> : <View style={styles.logo} />}
         </View>
 
         <View style={styles.meta}>

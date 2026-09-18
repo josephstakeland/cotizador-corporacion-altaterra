@@ -39,13 +39,45 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export async function urlToDataUrl(url: string): Promise<string> {
-  const response = await fetch(url);
-  const blob = await response.blob();
+function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+async function blobToPngDataUrl(blob: Blob): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return blobToDataUrl(blob);
+    }
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return canvas.toDataURL("image/png");
+  } catch {
+    return blobToDataUrl(blob);
+  }
+}
+
+export async function urlToDataUrl(url: string): Promise<string> {
+  if (!url.trim()) return "";
+  if (url.startsWith("data:image/")) return url;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return "";
+    const blob = await response.blob();
+    const type = blob.type || "";
+    if (type && !type.startsWith("image/") && type !== "application/octet-stream") return "";
+    return blobToPngDataUrl(blob);
+  } catch {
+    return "";
+  }
 }
