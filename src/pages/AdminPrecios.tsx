@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { NumericInput } from "../components/NumericInput";
 import * as api from "../lib/api";
 import { lotCode, money } from "../lib/money";
 import { useStore } from "../lib/store";
@@ -59,9 +60,9 @@ export function AdminPrecios() {
 
       <div className="mb-5 grid gap-2 rounded-xl border p-3 md:grid-cols-5">
         <input className="rounded border px-2 py-1" value={newLot.manzana} onChange={(event) => setNewLot({ ...newLot, manzana: event.target.value.toUpperCase() })} placeholder="Mz" />
-        <input type="number" className="rounded border px-2 py-1" value={newLot.numero} onChange={(event) => setNewLot({ ...newLot, numero: Number(event.target.value) })} placeholder="Nº" />
-        <input type="number" className="rounded border px-2 py-1" value={newLot.areaM2} onChange={(event) => setNewLot({ ...newLot, areaM2: Number(event.target.value) })} placeholder="Área" />
-        <input type="number" className="rounded border px-2 py-1" value={newLot.price} onChange={(event) => setNewLot({ ...newLot, price: Number(event.target.value) })} placeholder="Precio" />
+        <NumericInput className="rounded border px-2 py-1" value={newLot.numero} onValueChange={(numero) => setNewLot({ ...newLot, numero })} placeholder="Nº" />
+        <NumericInput decimal className="rounded border px-2 py-1" value={newLot.areaM2} onValueChange={(areaM2) => setNewLot({ ...newLot, areaM2 })} placeholder="Área" />
+        <NumericInput decimal className="rounded border px-2 py-1" value={newLot.price} onValueChange={(price) => setNewLot({ ...newLot, price })} placeholder="Precio" />
         <button className="rounded bg-brand-navy text-white" onClick={() => void create()}>
           Agregar lote
         </button>
@@ -88,19 +89,19 @@ export function AdminPrecios() {
                 <tr key={lot.id} className="border-b">
                   <td className="p-2 font-medium">{lotCode(lot.manzana, lot.numero)}</td>
                   <td className="p-2">
-                    <input
-                      type="number"
+                    <NumericInput
+                      decimal
                       className="w-24 rounded border px-2 py-1"
-                      value={draft.areaM2 ?? lot.areaM2}
-                      onChange={(event) => patch(lot.id, "areaM2", Number(event.target.value))}
+                      value={Number(draft.areaM2 ?? lot.areaM2)}
+                      onValueChange={(areaM2) => patch(lot.id, "areaM2", areaM2)}
                     />
                   </td>
                   <td className="p-2">
-                    <input
-                      type="number"
+                    <NumericInput
+                      decimal
                       className="w-32 rounded border px-2 py-1"
-                      value={draft.price ?? lot.price}
-                      onChange={(event) => patch(lot.id, "price", Number(event.target.value))}
+                      value={Number(draft.price ?? lot.price)}
+                      onValueChange={(price) => patch(lot.id, "price", price)}
                     />
                     <div className="text-xs text-slate-500">{money(Number(draft.price ?? lot.price))}</div>
                   </td>

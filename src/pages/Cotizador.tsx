@@ -3,6 +3,7 @@ import { Calendar, Download, Printer, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PlanMap } from "../components/map/PlanMap";
+import { NumericInput } from "../components/NumericInput";
 import { CotizacionPdf } from "../components/quote/CotizacionPdf";
 import { QuotePreview } from "../components/quote/QuotePreview";
 import * as api from "../lib/api";
@@ -293,13 +294,11 @@ export function Cotizador() {
                       <td className="p-1 font-semibold text-amber-300">{lotCode(lot.manzana, lot.numero)}</td>
                       <td className="p-1 text-center">{lot.areaM2.toFixed(2)}</td>
                       <td className="p-1">
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.01"
+                        <NumericInput
+                          decimal
                           className="app-input mt-0 w-28 py-1"
                           value={quotePrice}
-                          onChange={(event) => setPrices((current) => ({ ...current, [lot.id]: Number(event.target.value) }))}
+                          onValueChange={(next) => setPrices((current) => ({ ...current, [lot.id]: next }))}
                           aria-label={`Precio de cotización ${lotCode(lot.manzana, lot.numero)}`}
                         />
                         {quotePrice !== lot.price ? (
@@ -307,12 +306,11 @@ export function Cotizador() {
                         ) : null}
                       </td>
                       <td className="p-1">
-                        <input
-                          type="number"
-                          min={0}
+                        <NumericInput
+                          decimal
                           className="app-input mt-0 w-20 py-1"
                           value={discounts[lot.id] || 0}
-                          onChange={(event) => setDiscounts((current) => ({ ...current, [lot.id]: Number(event.target.value) }))}
+                          onValueChange={(next) => setDiscounts((current) => ({ ...current, [lot.id]: next }))}
                         />
                       </td>
                       <td className="p-1">
@@ -339,7 +337,7 @@ export function Cotizador() {
             </div>
             <label className="mt-3 block text-xs text-[var(--muted)]">
               Inicial del cliente (S/)
-              <input type="number" min={0} className="app-input" value={downPayment} onChange={(event) => setDownPayment(Number(event.target.value))} />
+              <NumericInput decimal className="app-input" value={downPayment} onValueChange={setDownPayment} />
             </label>
             <div className="mt-3 space-y-1 text-sm">
               <p>Total lista <span className="float-right">{money(totals.totalList)}</span></p>
@@ -356,14 +354,12 @@ export function Cotizador() {
             </div>
             <div className="space-y-2">
               {terms.map((term, index) => (
-                <div key={`${term}-${index}`} className="space-y-1">
+                <div key={index} className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
+                    <NumericInput
                       className="app-input mt-0 min-w-0 flex-1"
                       value={term}
-                      onChange={(event) => setTerms((current) => current.map((value, i) => (i === index ? Number(event.target.value) : value)))}
+                      onValueChange={(next) => setTerms((current) => current.map((value, i) => (i === index ? next : value)))}
                     />
                     <button
                       type="button"
