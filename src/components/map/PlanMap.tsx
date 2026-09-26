@@ -83,6 +83,10 @@ export function PlanMap({
   const zoomRef = useRef(1);
   const panRef = useRef({ active: false, x: 0, y: 0 });
   const lastPinch = useRef(0);
+  const lastMid = useRef<{ x: number; y: number } | null>(null);
+  const gestureRef = useRef<{ x: number; y: number; moved: boolean; kind: "pan" | "point" | "rect"; point: Point | null } | null>(null);
+  const rectStartRef = useRef<Point | null>(null);
+  const lastTouchRef = useRef(0);
   const vertexDragRef = useRef(false);
   const draftRef = useRef(draftPoints);
   draftRef.current = draftPoints;
@@ -175,10 +179,21 @@ export function PlanMap({
     };
   }, []);
 
-  function pointerToRel(event: KonvaEventObject<MouseEvent | TouchEvent>): Point | null {
+  function stagePoint(event: KonvaEventObject<MouseEvent | TouchEvent>) {
     const stage = event.target.getStage();
-    if (!stage || !image) return null;
+    if (!stage) return null;
     const pointer = stage.getPointerPosition();
+    if (pointer) return pointer;
+    if (!("changedTouches" in event.evt)) return null;
+    const touch = event.evt.changedTouches[0] || event.evt.touches[0];
+    if (!touch) return null;
+    const box = stage.container().getBoundingClientRect();
+    return { x: touch.clientX - box.left, y: touch.clientY - box.top };
+  }
+
+  function pointerToRel(event: KonvaEventObject<MouseEvent | TouchEvent>): Point | null {
+    if (!image) return null;
+    const pointer = stagePoint(event);
     if (!pointer) return null;
     const current = offsetRef.current;
     const scale = fitScale * zoomRef.current;
@@ -186,6 +201,18 @@ export function PlanMap({
       x: (pointer.x - current.x) / (image.width * scale),
       y: (pointer.y - current.y) / (image.height * scale),
     };
+  }
+
+  function lotUnder(event: KonvaEventObject<MouseEvent | TouchEvent>) {
+    let node = event.target as { name: () => string; getAttr: (key: string) => unknown; getParent: () => typeof node | null } | null;
+    while (node) {
+      if (node.name() === "lot") {
+        const id = String(node.getAttr("id") || "");
+        return lots.find((lot) => lot.id === id) || null;
+      }
+      node = node.getParent();
+    }
+    return null;
   }
 
   function wantPan(event: MouseEvent | TouchEvent) {
@@ -204,8 +231,7 @@ export function PlanMap({
 
   function movePan(event: KonvaEventObject<MouseEvent | TouchEvent>) {
     if (!panRef.current.active) return;
-    const stage = event.target.getStage();
-    const pointer = stage?.getPointerPosition();
+    const pointer = stagePoint(event);
     if (!pointer) return;
     const dx = pointer.x - panRef.current.x;
     const dy = pointer.y - panRef.current.y;
@@ -215,31 +241,11 @@ export function PlanMap({
     setOffset(next);
   }
 
-  function handleTouchMove(event: KonvaEventObject<TouchEvent>) {
-    const touches = event.evt.touches;
-    if (touches.length === 1 && panRef.current.active) {
-      event.evt.preventDefault();
-      movePan(event);
-      return;
-    }
-    if (touches.length !== 2) return;
-    event.evt.preventDefault();
-    const dist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
-    if (lastPinch.current) {
-      setZoom((value) => Math.min(6, Math.max(0.4, value * (dist / lastPinch.current))));
-    }
-    lastPinch.current = dist;
-  }
-
-  function handleClick(event: KonvaEventObject<MouseEvent>) {
-    if (vertexDragRef.current || panRef.current.active || spaceRef.current) return;
-    if (event.target.name() === "vertex") return;
+  function markStoredPoint(point: Point) {
     if (mode !== "edit") return;
-    const point = pointerToRel(event);
-    if (!point) return;
     if (reshaping && draftRef.current.length >= 3) {
       const edge = nearestEdge(draftRef.current, point);
-      const threshold = 14 / (image ? image.width * fitScale * zoomRef.current : 1);
+      const threshold = 18 / (image ? image.width * fitScale * zoomRef.current : 1);
       if (edge.dist <= threshold) {
         const next = [...draftRef.current];
         next.splice(edge.index, 0, edge.point);
@@ -248,10 +254,150 @@ export function PlanMap({
       return;
     }
     if (tool !== "polyline") return;
-    onDraftPoints([...draftPoints, point]);
+    onDraftPoints([...draftRef.current, point]);
+  }
+
+  function markDraw(event: KonvaEventObject<MouseEvent | TouchEvent>) {
+    if (vertexDragRef.current || panRef.current.active || spaceRef.current) return;
+    if (event.target.name() === "vertex" || event.target.name() === "lot") return;
+    const point = pointerToRel(event);
+    if (!point) return;
+    markStoredPoint(point);
+  }
+
+  function chooseLot(lot: Lot, additive = false) {
+    if (lot.status === "vendido" && mode === "view") return;
+    onSelect(lot, additive);
+  }
+
+  function beginRect(point: Point) {
+    rectStartRef.current = point;
+    setRectStart(point);
+    setRectCurrent(point);
+  }
+
+  function commitRect(event: KonvaEventObject<MouseEvent | TouchEvent>) {
+    const start = rectStartRef.current;
+    rectStartRef.current = null;
+    setRectStart(null);
+    setRectCurrent(null);
+    if (mode !== "edit" || tool !== "rect" || !start) return;
+    const end = pointerToRel(event);
+    if (!end) return;
+    const points: Point[] = [
+      { x: start.x, y: start.y },
+      { x: end.x, y: start.y },
+      { x: end.x, y: end.y },
+      { x: start.x, y: end.y },
+    ];
+    if (Math.abs(end.x - start.x) > 0.002 && Math.abs(end.y - start.y) > 0.002) {
+      onCreatePolygon?.(points);
+    }
+  }
+
+  function handleTouchStart(event: KonvaEventObject<TouchEvent>) {
+    lastTouchRef.current = Date.now();
+    if (event.evt.touches.length > 1) {
+      gestureRef.current = null;
+      panRef.current.active = false;
+      rectStartRef.current = null;
+      setRectStart(null);
+      setRectCurrent(null);
+      return;
+    }
+    if (event.target.name() === "vertex") return;
+    event.evt.preventDefault();
+    const pointer = stagePoint(event);
+    if (!pointer) return;
+    const kind = mode === "edit" && tool === "rect" ? "rect" : mode === "edit" && (tool === "polyline" || reshaping) ? "point" : "pan";
+    gestureRef.current = { x: pointer.x, y: pointer.y, moved: false, kind, point: pointerToRel(event) };
+    if (kind === "rect") {
+      const point = pointerToRel(event);
+      if (point) beginRect(point);
+    }
+  }
+
+  function handleTouchMove(event: KonvaEventObject<TouchEvent>) {
+    const touches = event.evt.touches;
+    if (touches.length === 2) {
+      event.evt.preventDefault();
+      gestureRef.current = null;
+      panRef.current.active = false;
+      const dist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+      const box = event.target.getStage()?.container().getBoundingClientRect();
+      const mid = {
+        x: (touches[0].clientX + touches[1].clientX) / 2 - (box?.left || 0),
+        y: (touches[0].clientY + touches[1].clientY) / 2 - (box?.top || 0),
+      };
+      if (lastPinch.current) {
+        setZoom((value) => Math.min(6, Math.max(0.4, value * (dist / lastPinch.current))));
+      }
+      if (lastMid.current) {
+        const next = {
+          x: offsetRef.current.x + (mid.x - lastMid.current.x),
+          y: offsetRef.current.y + (mid.y - lastMid.current.y),
+        };
+        offsetRef.current = next;
+        setOffset(next);
+      }
+      lastPinch.current = dist;
+      lastMid.current = mid;
+      return;
+    }
+    if (touches.length !== 1) return;
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    const pointer = stagePoint(event);
+    if (!pointer) return;
+    const slop = gesture.kind === "point" ? 28 : 12;
+    if (Math.hypot(pointer.x - gesture.x, pointer.y - gesture.y) > slop) gesture.moved = true;
+    if (gesture.kind === "pan" && gesture.moved) {
+      event.evt.preventDefault();
+      if (!panRef.current.active) panRef.current = { active: true, x: pointer.x, y: pointer.y };
+      movePan(event);
+      return;
+    }
+    if (gesture.kind === "rect" && gesture.moved) {
+      event.evt.preventDefault();
+      const point = pointerToRel(event);
+      if (point) setRectCurrent(point);
+    }
+  }
+
+  function handleTouchEnd(event: KonvaEventObject<TouchEvent>) {
+    lastPinch.current = 0;
+    lastMid.current = null;
+    const gesture = gestureRef.current;
+    gestureRef.current = null;
+    const dragged = panRef.current.active || Boolean(gesture?.moved);
+    panRef.current.active = false;
+    if (!gesture) return;
+    if (gesture.kind === "rect") {
+      if (gesture.moved) commitRect(event);
+      else {
+        rectStartRef.current = null;
+        setRectStart(null);
+        setRectCurrent(null);
+      }
+      return;
+    }
+    if (dragged) return;
+    if (gesture.kind === "point" && gesture.point) {
+      markStoredPoint(gesture.point);
+      return;
+    }
+    const lot = lotUnder(event);
+    if (lot) chooseLot(lot);
+  }
+
+  function handleClick(event: KonvaEventObject<MouseEvent | TouchEvent>) {
+    if (Date.now() - lastTouchRef.current < 800) return;
+    if (event.evt.type === "touchend" || event.evt.type === "touchstart") return;
+    markDraw(event);
   }
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
+    if (Date.now() - lastTouchRef.current < 800) return;
     containerRef.current?.focus();
     if (event.target.name() === "vertex") return;
     if (wantPan(event.evt)) {
@@ -262,11 +408,11 @@ export function PlanMap({
     if (mode !== "edit" || tool !== "rect") return;
     const point = pointerToRel(event);
     if (!point) return;
-    setRectStart(point);
-    setRectCurrent(point);
+    beginRect(point);
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
+    if (Date.now() - lastTouchRef.current < 800) return;
     if (panRef.current.active) {
       event.evt.preventDefault();
       movePan(event);
@@ -278,28 +424,15 @@ export function PlanMap({
   }
 
   function handleMouseUp(event: KonvaEventObject<MouseEvent>) {
+    if (Date.now() - lastTouchRef.current < 800) return;
     if (panRef.current.active) {
       panRef.current.active = false;
-      return;
-    }
-    if (mode !== "edit" || tool !== "rect" || !rectStart) {
+      rectStartRef.current = null;
       setRectStart(null);
       setRectCurrent(null);
       return;
     }
-    const end = pointerToRel(event) || rectCurrent;
-    setRectStart(null);
-    setRectCurrent(null);
-    if (!end) return;
-    const points: Point[] = [
-      { x: rectStart.x, y: rectStart.y },
-      { x: end.x, y: rectStart.y },
-      { x: end.x, y: end.y },
-      { x: rectStart.x, y: end.y },
-    ];
-    if (Math.abs(end.x - rectStart.x) > 0.002 && Math.abs(end.y - rectStart.y) > 0.002) {
-      onCreatePolygon?.(points);
-    }
+    commitRect(event);
   }
 
   function handleWheel(event: KonvaEventObject<WheelEvent>) {
@@ -331,14 +464,27 @@ export function PlanMap({
     : null;
 
   const panning = spaceDown;
+  const coarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
   const hint =
     mode === "view"
-      ? "Puntero sobre un lote para ver datos. Espacio + arrastrar para mover."
+      ? coarse
+        ? "Toca un lote para marcarlo. Arrastra para mover el plano."
+        : "Puntero sobre un lote para ver datos. Espacio + arrastrar para mover."
       : reshaping
-        ? "Arrastra los puntos. Clic en un lado para agregar. Doble clic en un punto para quitarlo."
-        : tool === "select"
-          ? "Arrastra para mover el plano"
-          : "Mantén Espacio y arrastra para mover";
+        ? coarse
+          ? "Arrastra los puntos dorados. Toca un lado para agregar un punto."
+          : "Arrastra los puntos. Clic en un lado para agregar. Doble clic en un punto para quitarlo."
+        : tool === "rect"
+          ? coarse
+            ? "Arrastra el dedo para dibujar el rectángulo. Dos dedos para mover."
+            : "Arrastra para dibujar. Mantén Espacio para mover el plano."
+          : tool === "polyline"
+            ? coarse
+              ? "Toca el plano para marcar puntos. Dos dedos para mover y hacer zoom."
+              : "Clic para marcar puntos. Mantén Espacio y arrastra para mover."
+            : coarse
+              ? "Toca un lote para elegirlo. Arrastra para mover el plano."
+              : "Arrastra para mover el plano";
 
   return (
     <div className="space-y-2">
@@ -380,12 +526,16 @@ export function PlanMap({
         style={{
           cursor: panning || panRef.current.active ? "grab" : hover ? "pointer" : tool === "rect" ? "crosshair" : reshaping ? "default" : "default",
           outline: "none",
+          touchAction: "none",
         }}
       >
         <Stage
           width={size.width}
           height={size.height}
           pixelRatio={typeof window !== "undefined" ? Math.max(2, window.devicePixelRatio || 1) : 2}
+          ref={(node) => {
+            node?.container().style.setProperty("touch-action", "none");
+          }}
           onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -397,15 +547,9 @@ export function PlanMap({
             setHover(null);
           }}
           onWheel={handleWheel}
-          onTouchStart={(event) => {
-            if (event.target.name() === "vertex") return;
-            if (event.evt.touches.length === 1) startPan(event);
-          }}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
-          onTouchEnd={() => {
-            lastPinch.current = 0;
-            panRef.current.active = false;
-          }}
+          onTouchEnd={handleTouchEnd}
           onContextMenu={(event) => event.evt.preventDefault()}
         >
           <Layer>
@@ -423,11 +567,14 @@ export function PlanMap({
                 return (
                   <Group key={lot.id}>
                     <Line
+                      name="lot"
+                      id={lot.id}
                       points={toFlat(lot.polygon, imgW, imgH)}
                       closed
                       fill={fill}
                       stroke={stroke}
                       strokeWidth={(selected || hovered ? 5 : 2) / groupScale}
+                      hitStrokeWidth={24 / groupScale}
                       onMouseEnter={(event) => {
                         const pointer = event.target.getStage()?.getPointerPosition();
                         if (!pointer) return;
@@ -441,9 +588,10 @@ export function PlanMap({
                       onMouseLeave={() => setHover(null)}
                       onClick={(event) => {
                         event.cancelBubble = true;
+                        if (Date.now() - lastTouchRef.current < 800) return;
+                        if (event.evt.type === "touchend" || event.evt.type === "touchstart") return;
                         if (spaceRef.current || panRef.current.active) return;
-                        if (lot.status === "vendido" && mode === "view") return;
-                        onSelect(lot, event.evt.ctrlKey || event.evt.metaKey);
+                        chooseLot(lot, event.evt.ctrlKey || event.evt.metaKey);
                       }}
                       onContextMenu={(event) => {
                         event.evt.preventDefault();
@@ -477,7 +625,7 @@ export function PlanMap({
                       name="vertex"
                       x={point.x * imgW}
                       y={point.y * imgH}
-                      radius={10 / groupScale}
+                      radius={(coarse ? 18 : 10) / groupScale}
                       fill="#c6a04a"
                       stroke="#fff"
                       strokeWidth={2 / groupScale}

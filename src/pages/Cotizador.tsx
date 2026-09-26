@@ -416,7 +416,7 @@ export function Cotizador() {
           <div className="no-print mb-2 flex items-center justify-between gap-2">
             <div>
               <p className="font-semibold">Plano de lotización · {currentProject.name}</p>
-              <p className="text-xs text-[var(--muted)]">Pasa el puntero sobre un lote para ver precio y disponibilidad. Espacio + arrastrar para mover.</p>
+              <p className="text-xs text-[var(--muted)]">Toca un lote para marcarlo. Arrastra el plano para moverlo.</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <button
